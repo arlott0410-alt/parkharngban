@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminSettings, setAdminSettings } from "@/lib/admin-settings";
 
 export const runtime = "edge";
-
-// Note: In production, you'd store the custom prompt in Supabase or a KV store.
-// For Cloudflare Pages, use KV or D1 for persistence.
-// This is a simple in-memory store that resets on cold start.
-let customPrompt: string | null = null;
 
 function isAdmin(request: NextRequest): boolean {
   const session = request.cookies.get("admin_session")?.value;
@@ -18,8 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { DEFAULT_SYSTEM_PROMPT } = await import("@/lib/gemini");
-  return NextResponse.json({ prompt: customPrompt ?? DEFAULT_SYSTEM_PROMPT });
+  return NextResponse.json(getAdminSettings());
 }
 
 export async function POST(request: NextRequest) {
@@ -27,12 +22,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json() as { prompt: string };
+  const body = await request.json() as { prompt: string; welcomeMessage?: string };
   if (!body.prompt?.trim()) {
     return NextResponse.json({ error: "Prompt cannot be empty" }, { status: 400 });
   }
 
-  customPrompt = body.prompt;
+  if (body.welcomeMessage !== undefined && !body.welcomeMessage.trim()) {
+    return NextResponse.json({ error: "Welcome message cannot be empty" }, { status: 400 });
+  }
 
-  return NextResponse.json({ success: true, message: "Prompt updated" });
+  setAdminSettings({
+    prompt: body.prompt,
+    welcomeMessage: body.welcomeMessage,
+  });
+
+  return NextResponse.json({ success: true, message: "Settings updated" });
 }

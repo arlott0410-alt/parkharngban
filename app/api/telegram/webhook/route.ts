@@ -8,6 +8,7 @@ import {
 } from "@/lib/telegram";
 import { parseTransaction, matchCategoryByHint } from "@/lib/gemini";
 import { createAdminClient } from "@/lib/supabase";
+import { getAdminSettings } from "@/lib/admin-settings";
 import { isSubscriptionActive } from "@/lib/utils";
 import type { TelegramUpdate } from "@/types";
 
@@ -53,7 +54,8 @@ export async function POST(request: NextRequest) {
         { onConflict: "id" }
       );
 
-      await sendTelegramMessage(chatId, buildWelcomeMessage(firstName), {
+      const { welcomeMessage } = getAdminSettings();
+      await sendTelegramMessage(chatId, buildWelcomeMessage(firstName, welcomeMessage), {
         parse_mode: "HTML",
       });
       return NextResponse.json({ ok: true });

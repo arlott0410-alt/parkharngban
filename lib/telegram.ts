@@ -189,6 +189,12 @@ export function buildErrorReply(reason: "parse_failed" | "expired" | "not_regist
   return messages[reason];
 }
 
-export function buildWelcomeMessage(firstName: string): string {
-  return `🌺 ສະບາຍດີ ${firstName}!\n\nປ້າຂ້າງບ້ານຢູ່ນີ້ ✨\nຊ່ວຍຈົດລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ\n\n💬 ສົ່ງຂໍ້ຄວາມໄດ້ເລີຍ ເຊັ່ນ:\n• "ຈ່າຍ 50,000 ຊື້ອາຫານ"\n• "ຮັບເງິນເດືອນ 1.5ລ້ານ"\n\n💰 ຄ່າບໍລິການ: 30,000 ກີບ/ເດືອນ\n\nກົດ /subscribe ເພື່ອເລີ່ມໃຊ້ງານ 🙏`;
+export const DEFAULT_WELCOME_TEMPLATE =
+  "🌺 ສະບາຍດີ {{firstName}}!\n\nປ້າຂ້າງບ້ານຢູ່ນີ້ ✨\nຊ່ວຍຈົດລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ\n\n💬 ສົ່ງຂໍ້ຄວາມໄດ້ເລີຍ ເຊັ່ນ:\n• \"ຈ່າຍ 50,000 ຊື້ອາຫານ\"\n• \"ຮັບເງິນເດືອນ 1.5ລ້ານ\"\n\n💰 ຄ່າບໍລິການ: 30,000 ກີບ/ເດືອນ\n\nກົດ /subscribe ເພື່ອເລີ່ມໃຊ້ງານ 🙏";
+
+export function buildWelcomeMessage(
+  firstName: string,
+  template: string = DEFAULT_WELCOME_TEMPLATE
+): string {
+  return template.replaceAll("{{firstName}}", firstName);
 }

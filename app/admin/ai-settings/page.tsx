@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Bot, Play, Save, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { DEFAULT_SYSTEM_PROMPT } from "@/lib/gemini";
+import { DEFAULT_WELCOME_TEMPLATE } from "@/lib/telegram";
 import type { GeminiParseResponse } from "@/types";
 
 const TEST_EXAMPLES = [
@@ -23,10 +25,27 @@ const TEST_EXAMPLES = [
 
 export default function AdminAISettingsPage() {
   const [prompt, setPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [welcomeMessage, setWelcomeMessage] = useState(DEFAULT_WELCOME_TEMPLATE);
   const [testInput, setTestInput] = useState("");
   const [testResult, setTestResult] = useState<GeminiParseResponse | null>(null);
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/admin/ai-settings");
+        if (!res.ok) return;
+        const data = await res.json() as { prompt?: string; welcomeMessage?: string };
+        if (data.prompt) setPrompt(data.prompt);
+        if (data.welcomeMessage) setWelcomeMessage(data.welcomeMessage);
+      } catch {
+        // Keep defaults when loading fails.
+      }
+    };
+
+    void loadSettings();
+  }, []);
 
   const handleTest = async () => {
     if (!testInput.trim()) return;
@@ -53,10 +72,10 @@ export default function AdminAISettingsPage() {
       const res = await fetch("/api/admin/ai-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, welcomeMessage }),
       });
       if (res.ok) {
-        toast.success("ບັນທຶກ Prompt ສຳເລັດ");
+        toast.success("ບັນທຶກ Settings ສຳເລັດ");
       } else {
         toast.error("ບັນທຶກບໍ່ສຳເລັດ");
       }
@@ -67,7 +86,8 @@ export default function AdminAISettingsPage() {
 
   const handleReset = () => {
     setPrompt(DEFAULT_SYSTEM_PROMPT);
-    toast.info("Reset prompt ແລ້ວ");
+    setWelcomeMessage(DEFAULT_WELCOME_TEMPLATE);
+    toast.info("Reset settings ແລ້ວ");
   };
 
   return (
@@ -114,6 +134,27 @@ export default function AdminAISettingsPage() {
                   Reset
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bot className="h-4 w-4 text-primary" />
+                Welcome Message (/start)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                rows={10}
+                className="font-mono text-xs resize-none"
+                placeholder="ຂໍ້ຄວາມຕ້ອນຮັບ..."
+              />
+              <p className="text-xs text-muted-foreground">
+                ใช้ <code>{"{{firstName}}"}</code> เพื่อแทนชื่อผู้ใช้
+              </p>
             </CardContent>
           </Card>
         </div>
