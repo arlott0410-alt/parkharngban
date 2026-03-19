@@ -1,13 +1,15 @@
-"use client";
-
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function PaymentSuccessPage() {
-  const params = useSearchParams();
-  const reference = params.get("ref");
+type PaymentSuccessPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function PaymentSuccessPage({ searchParams }: PaymentSuccessPageProps) {
+  const resolvedParams = (await searchParams) ?? {};
+  const referenceValue = resolvedParams.ref;
+  const reference = Array.isArray(referenceValue) ? referenceValue[0] : referenceValue;
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-10 bg-background">
