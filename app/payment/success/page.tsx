@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+export const runtime = "edge";
+
 type PaymentSuccessPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
