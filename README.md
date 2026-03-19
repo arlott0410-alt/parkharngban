@@ -34,10 +34,14 @@ git push -u origin main
 2. Connect your GitHub repository
 3. Configure build settings:
    - **Framework preset**: Next.js
-   - **Build command**: `npm run build`
-   - **Build output directory**: `.next`
+   - **Build command**: `npm run pages:build`
+   - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (or `pah-khaang-baan/` if nested)
 4. Click **Save and Deploy**
+
+> Notes:
+> - This project uses `@cloudflare/next-on-pages` to generate the runtime worker for SSR/API routes.
+> - If your previous deploy was using `.next` as output, update it to `.vercel/output/static` or you'll get 404 / missing functions.
 
 ### 3. Environment Variables (Cloudflare Dashboard)
 
