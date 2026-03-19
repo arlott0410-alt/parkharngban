@@ -4,7 +4,7 @@
   "description": "ປ້າຂ້າງບ້ານ — Telegram AI bot for Lao income/expense tracking",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build": "next build && node scripts/clean-next-cache.mjs",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
