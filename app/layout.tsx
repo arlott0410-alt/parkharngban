@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Noto_Sans_Lao } from "next/font/google";
 import "./globals.css";
+
+const notoSansLao = Noto_Sans_Lao({
+  subsets: ["lao", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-noto-sans-lao",
+});
 
 export const metadata: Metadata = {
   title: "ປ້າຂ້າງບ້ານ | Pah-Khaang-Baan",
@@ -29,10 +37,8 @@ export default function RootLayout({
       <head>
         {/* Telegram WebApp SDK */}
         <script src="https://telegram.org/js/telegram-web-app.js" async />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="min-h-screen bg-background antialiased">
+      <body className={`${notoSansLao.variable} min-h-screen bg-background antialiased`}>
         {children}
       </body>
     </html>

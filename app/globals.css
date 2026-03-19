@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Fonts — Lao + Inter */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Lao:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -68,7 +65,7 @@
 
   /* Lao text rendering */
   .lao-text {
-    font-family: "Noto Sans Lao", "Inter", sans-serif;
+    font-family: var(--font-noto-sans-lao), "Noto Sans Lao", sans-serif;
     line-height: 1.8;
   }
 }

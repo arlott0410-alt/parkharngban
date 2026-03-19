@@ -107,7 +107,7 @@ const config: Config = {
         shimmer: "shimmer 2s linear infinite",
       },
       fontFamily: {
-        sans: ["Inter", "Noto Sans Lao", "system-ui", "sans-serif"],
+        sans: ["var(--font-noto-sans-lao)", "Noto Sans Lao", "system-ui", "sans-serif"],
         lao: ["Noto Sans Lao", "sans-serif"],
       },
     },
