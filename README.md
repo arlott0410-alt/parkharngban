@@ -42,6 +42,7 @@ git push -u origin main
 > Notes:
 > - This project uses `@cloudflare/next-on-pages` to generate the runtime worker for SSR/API routes.
 > - If your previous deploy was using `.next` as output, update it to `.vercel/output/static` or you'll get 404 / missing functions.
+> - Production secrets are managed in Cloudflare Dashboard. Do **not** commit `[vars]` or `[[secret_store_secrets]]` into `wrangler.toml` (build is guarded to fail if found).
 
 ### 3. Environment Variables (Cloudflare Dashboard)
 

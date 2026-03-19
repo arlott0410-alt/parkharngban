@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "build": "next build && node scripts/clean-next-cache.mjs",
-    "pages:build": "npx @cloudflare/next-on-pages@1",
+    "pages:build": "node scripts/guard-cloudflare-secrets.mjs && npx @cloudflare/next-on-pages@1",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
