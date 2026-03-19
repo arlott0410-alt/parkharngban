@@ -42,26 +42,45 @@ export default function MiniAppLayout({ children }: { children: React.ReactNode 
   const [isTelegram, setIsTelegram] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 30;
 
-    if (tg) {
-      // Initialize Telegram WebApp
-      tg.ready();
-      tg.expand();
-      tg.enableClosingConfirmation();
+    const tryInitTelegram = () => {
+      if (cancelled) return;
 
-      // Sync color scheme
-      if (tg.colorScheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
+      const tg = window.Telegram?.WebApp;
+      const hasInitData = Boolean(tg?.initData);
+
+      if (tg && hasInitData) {
+        tg.ready();
+        tg.expand();
+        tg.enableClosingConfirmation();
+
+        if (tg.colorScheme === "dark") {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+
+        setIsTelegram(true);
+        return;
       }
 
-      setIsTelegram(true);
-    } else {
-      // Not in Telegram — show block page
-      setIsTelegram(false);
-    }
+      attempts += 1;
+      if (attempts >= maxAttempts) {
+        setIsTelegram(false);
+        return;
+      }
+
+      setTimeout(tryInitTelegram, 100);
+    };
+
+    tryInitTelegram();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Loading state
