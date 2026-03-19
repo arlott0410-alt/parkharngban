@@ -5,6 +5,11 @@
 export type TransactionType = "income" | "expense";
 export type SubscriptionStatus = "active" | "inactive" | "expired";
 export type CategoryType = "income" | "expense" | "both";
+export type GeminiModel =
+  | "gemini-2.0-flash"
+  | "gemini-2.0-flash-lite-preview-02-05"
+  | "gemini-1.5-flash"
+  | "gemini-1.5-pro";
 
 // ======================================
 // Database Types (mirrors Supabase tables)
@@ -155,6 +160,12 @@ export interface GeminiParseResponse {
   transaction?: ParsedTransaction;
   error?: string;
   raw_response?: string;
+}
+
+export interface AdminAISettings {
+  prompt: string;
+  welcomeMessage: string;
+  selectedModel: GeminiModel;
 }
 
 // ======================================

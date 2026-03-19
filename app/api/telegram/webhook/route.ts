@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         { onConflict: "id" }
       );
 
-      const { welcomeMessage } = getAdminSettings();
+      const { welcomeMessage } = await getAdminSettings();
       await sendTelegramMessage(chatId, buildWelcomeMessage(firstName, welcomeMessage), {
         parse_mode: "HTML",
       });

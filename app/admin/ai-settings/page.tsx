@@ -8,12 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { DEFAULT_SYSTEM_PROMPT } from "@/lib/gemini";
+import { DEFAULT_SYSTEM_PROMPT } from "@/lib/ai-defaults";
 import { DEFAULT_WELCOME_TEMPLATE } from "@/lib/telegram";
-import type { GeminiParseResponse } from "@/types";
+import { DEFAULT_GEMINI_MODEL, GEMINI_MODEL_OPTIONS } from "@/lib/gemini-models";
+import type { GeminiModel, GeminiParseResponse } from "@/types";
 
 const TEST_EXAMPLES = [
   "ຈ່າຍ 50,000 ຊື້ເຂົ້າກິນ",
@@ -26,6 +34,7 @@ const TEST_EXAMPLES = [
 export default function AdminAISettingsPage() {
   const [prompt, setPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [welcomeMessage, setWelcomeMessage] = useState(DEFAULT_WELCOME_TEMPLATE);
+  const [selectedModel, setSelectedModel] = useState<GeminiModel>(DEFAULT_GEMINI_MODEL);
   const [testInput, setTestInput] = useState("");
   const [testResult, setTestResult] = useState<GeminiParseResponse | null>(null);
   const [testing, setTesting] = useState(false);
@@ -36,9 +45,14 @@ export default function AdminAISettingsPage() {
       try {
         const res = await fetch("/api/admin/ai-settings");
         if (!res.ok) return;
-        const data = await res.json() as { prompt?: string; welcomeMessage?: string };
+        const data = await res.json() as {
+          prompt?: string;
+          welcomeMessage?: string;
+          selected_model?: GeminiModel;
+        };
         if (data.prompt) setPrompt(data.prompt);
         if (data.welcomeMessage) setWelcomeMessage(data.welcomeMessage);
+        if (data.selected_model) setSelectedModel(data.selected_model);
       } catch {
         // Keep defaults when loading fails.
       }
@@ -72,7 +86,7 @@ export default function AdminAISettingsPage() {
       const res = await fetch("/api/admin/ai-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, welcomeMessage }),
+        body: JSON.stringify({ prompt, welcomeMessage, selected_model: selectedModel }),
       });
       if (res.ok) {
         toast.success("ບັນທຶກ Settings ສຳເລັດ");
@@ -87,6 +101,7 @@ export default function AdminAISettingsPage() {
   const handleReset = () => {
     setPrompt(DEFAULT_SYSTEM_PROMPT);
     setWelcomeMessage(DEFAULT_WELCOME_TEMPLATE);
+    setSelectedModel(DEFAULT_GEMINI_MODEL);
     toast.info("Reset settings ແລ້ວ");
   };
 
@@ -113,6 +128,24 @@ export default function AdminAISettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Gemini Model</Label>
+                <Select
+                  value={selectedModel}
+                  onValueChange={(value) => setSelectedModel(value as GeminiModel)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Gemini model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GEMINI_MODEL_OPTIONS.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
