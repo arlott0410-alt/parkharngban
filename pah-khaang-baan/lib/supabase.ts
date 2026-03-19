@@ -1,0 +1,229 @@
+import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+// ======================================
+// Environment Variables
+// ======================================
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+// ======================================
+// Browser Client (public anon key)
+// ======================================
+
+export function createBrowserClient() {
+  return createClient(supabaseUrl, supabaseAnonKey);
+}
+
+// ======================================
+// Server Client (for Server Components / Route Handlers)
+// ======================================
+
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // Server Component context — ignore cookie setting errors
+        }
+      },
+    },
+  });
+}
+
+// ======================================
+// Admin Client (service role — bypass RLS)
+// Only used in server-side API routes
+// ======================================
+
+export function createAdminClient() {
+  if (!supabaseServiceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
+  }
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+// ======================================
+// Helper: Set current user for RLS policies
+// ======================================
+
+export async function setUserContext(
+  client: ReturnType<typeof createAdminClient>,
+  userId: number
+) {
+  await client.rpc("set_config", {
+    setting_name: "app.current_user_id",
+    setting_value: userId.toString(),
+    is_local: true,
+  });
+}
+
+// ======================================
+// Type-safe DB helpers
+// ======================================
+
+export type Database = {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: number;
+          username: string | null;
+          first_name: string;
+          last_name: string | null;
+          language_code: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: number;
+          username?: string | null;
+          first_name: string;
+          last_name?: string | null;
+          language_code?: string | null;
+        };
+        Update: {
+          username?: string | null;
+          first_name?: string;
+          last_name?: string | null;
+          language_code?: string | null;
+          updated_at?: string;
+        };
+      };
+      subscriptions: {
+        Row: {
+          id: string;
+          user_id: number;
+          status: "active" | "inactive" | "expired";
+          started_at: string | null;
+          expiry_date: string | null;
+          payment_ref: string | null;
+          amount_lak: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: number;
+          status?: "active" | "inactive" | "expired";
+          started_at?: string | null;
+          expiry_date?: string | null;
+          payment_ref?: string | null;
+          amount_lak?: number;
+        };
+        Update: {
+          status?: "active" | "inactive" | "expired";
+          started_at?: string | null;
+          expiry_date?: string | null;
+          payment_ref?: string | null;
+          amount_lak?: number;
+          updated_at?: string;
+        };
+      };
+      transactions: {
+        Row: {
+          id: string;
+          user_id: number;
+          type: "income" | "expense";
+          amount: number;
+          category_id: string | null;
+          description: string | null;
+          raw_text: string | null;
+          ai_parsed: boolean;
+          note: string | null;
+          transaction_date: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: number;
+          type: "income" | "expense";
+          amount: number;
+          category_id?: string | null;
+          description?: string | null;
+          raw_text?: string | null;
+          ai_parsed?: boolean;
+          note?: string | null;
+          transaction_date?: string;
+        };
+        Update: {
+          type?: "income" | "expense";
+          amount?: number;
+          category_id?: string | null;
+          description?: string | null;
+          note?: string | null;
+          transaction_date?: string;
+          updated_at?: string;
+        };
+      };
+      categories: {
+        Row: {
+          id: string;
+          name: string;
+          name_lao: string | null;
+          type: "income" | "expense" | "both";
+          icon: string;
+          color: string;
+          is_default: boolean;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          name: string;
+          name_lao?: string | null;
+          type: "income" | "expense" | "both";
+          icon?: string;
+          color?: string;
+          is_default?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          name_lao?: string | null;
+          type?: "income" | "expense" | "both";
+          icon?: string;
+          color?: string;
+          is_default?: boolean;
+          sort_order?: number;
+        };
+      };
+      budgets: {
+        Row: {
+          id: string;
+          user_id: number;
+          category_id: string;
+          amount: number;
+          month: number;
+          year: number;
+          created_at: string;
+        };
+        Insert: {
+          user_id: number;
+          category_id: string;
+          amount: number;
+          month: number;
+          year: number;
+        };
+        Update: {
+          amount?: number;
+        };
+      };
+    };
+  };
+};
