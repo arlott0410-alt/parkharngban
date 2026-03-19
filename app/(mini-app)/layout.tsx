@@ -86,7 +86,7 @@ export default function MiniAppLayout({ children }: { children: React.ReactNode 
           Available only via Telegram
         </p>
         <a
-          href="https://t.me"
+          href="https://t.me/parkharngbanbot"
           className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#2AABEE] px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
         >
           Open Telegram
