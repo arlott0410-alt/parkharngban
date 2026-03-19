@@ -3,6 +3,8 @@ import { KpiCard } from "@/components/admin/KpiCard";
 import { RevenueChart, SubscriptionsChart } from "@/components/admin/Charts";
 import type { DashboardStats, MonthlyRevenueData } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 async function getDashboardStats(): Promise<DashboardStats> {
   try {
     const supabase = createAdminClient();

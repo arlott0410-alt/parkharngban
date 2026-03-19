@@ -10,6 +10,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, isSubscriptionActive, daysUntilExpiry, formatLAK } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 async function getSubscriptions() {
   const supabase = createAdminClient();
   const { data, error } = await supabase

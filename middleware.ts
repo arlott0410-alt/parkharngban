@@ -6,14 +6,12 @@ export function middleware(request: NextRequest) {
   // ======================================
   // Protect /admin routes
   // ======================================
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
     const adminTelegramId = process.env.ADMIN_TELEGRAM_ID;
 
-    // Check admin session cookie
     const adminSession = request.cookies.get("admin_session")?.value;
 
     if (!adminSession || adminSession !== adminTelegramId) {
-      // Redirect to admin login page
       const loginUrl = new URL("/admin/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
