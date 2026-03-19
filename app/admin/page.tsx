@@ -42,7 +42,7 @@ async function getDashboardStats(): Promise<DashboardStats> {
 async function getMonthlyRevenue(): Promise<MonthlyRevenueData[]> {
   const months = ["ມ.ກ", "ກ.ພ", "ມ.ນ", "ເ.ສ", "ພ.ສ", "ມ.ຖ", "ກ.ລ", "ສ.ຫ", "ກ.ຍ", "ຕ.ລ", "ພ.ຈ", "ທ.ວ"];
   // Placeholder — replace with actual Supabase aggregation query
-  return months.slice(0, new Date().getMonth() + 1).map((month, i) => ({
+  return months.slice(0, new Date().getMonth() + 1).map((month) => ({
     month,
     revenue: Math.floor(Math.random() * 500000) + 100000,
     subscriptions: Math.floor(Math.random() * 20) + 5,

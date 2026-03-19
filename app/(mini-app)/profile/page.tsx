@@ -78,8 +78,11 @@ export default function ProfilePage() {
 
       if (result.payment_url) {
         // Open Phajay payment URL in Telegram
-        window.Telegram?.WebApp?.openLink?.(result.payment_url) ??
+        if (window.Telegram?.WebApp?.openLink) {
+          window.Telegram.WebApp.openLink(result.payment_url);
+        } else {
           window.open(result.payment_url, "_blank");
+        }
       } else {
         toast.error(result.error ?? "ສ້າງ link ຊຳລະເງິນບໍ່ໄດ້");
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Bot, Play, Save, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";

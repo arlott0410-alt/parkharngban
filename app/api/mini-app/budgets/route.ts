@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   // Get spending per category this month
   const categoryIds = (budgets ?? []).map((b) => b.category_id);
 
-  let spendingMap: Record<string, number> = {};
+  const spendingMap: Record<string, number> = {};
 
   if (categoryIds.length > 0) {
     const { data: txData } = await supabase
