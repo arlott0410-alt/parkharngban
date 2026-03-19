@@ -5,17 +5,16 @@ import { motion } from "framer-motion";
 import {
   Crown,
   Download,
-  ExternalLink,
   AlertCircle,
   CheckCircle,
   Clock,
-  RefreshCw,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { SubscriptionButton } from "@/components/mini-app/SubscriptionButton";
 import { toast } from "sonner";
 import {
   formatDateTime,
@@ -66,32 +65,6 @@ export default function ProfilePage() {
     };
     void fetchProfile();
   }, [initDataRaw]);
-
-  const handleRenew = async () => {
-    setRenewLoading(true);
-    try {
-      const res = await fetch("/api/mini-app/renew-subscription", {
-        method: "POST",
-        headers: { "x-telegram-init-data": initDataRaw },
-      });
-      const result = await res.json() as { payment_url?: string; error?: string };
-
-      if (result.payment_url) {
-        // Open Phajay payment URL in Telegram
-        if (window.Telegram?.WebApp?.openLink) {
-          window.Telegram.WebApp.openLink(result.payment_url);
-        } else {
-          window.open(result.payment_url, "_blank");
-        }
-      } else {
-        toast.error(result.error ?? "ສ້າງ link ຊຳລະເງິນບໍ່ໄດ້");
-      }
-    } catch {
-      toast.error("ເກີດຂໍ້ຜິດພາດ ກະລຸນາລອງໃໝ່");
-    } finally {
-      setRenewLoading(false);
-    }
-  };
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -221,24 +194,13 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <Button
-              onClick={handleRenew}
+            <SubscriptionButton
+              userId={tgUser?.id ?? data?.user?.id}
+              isActive={isActive}
+              days={days}
               loading={renewLoading}
-              className={`w-full mt-3 gap-2 ${isActive && days > 7 ? "h-9 text-sm" : "h-11"}`}
-              variant={isActive && days > 7 ? "outline" : "default"}
-            >
-              {isActive && days > 7 ? (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  ຕໍ່ອາຍຸ (ຍັງ {days} ວັນ)
-                </>
-              ) : (
-                <>
-                  <ExternalLink className="h-4 w-4" />
-                  {isActive ? "ຕໍ່ອາຍຸ" : "ສະໝັກ 30,000 ກີບ"}
-                </>
-              )}
-            </Button>
+              onLoadingChange={setRenewLoading}
+            />
           </motion.div>
 
           {/* Stats */}

@@ -1,94 +1,78 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyPhajayWebhook, calculateNewExpiry } from "@/lib/phajay";
+import { NextRequest } from "next/server";
+import { isSuccessfulPhajayStatus, verifyPhajayWebhookSignature } from "@/lib/phajay";
 import { createAdminClient } from "@/lib/supabase";
 import type { PhajayWebhookPayload } from "@/types";
 
 export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
+  const acknowledge = new Response("OK", { status: 200 });
+
   try {
-    const payload = await request.json() as PhajayWebhookPayload;
+    const rawBody = await request.text();
+    const signature =
+      request.headers.get("x-phajay-signature") ?? request.headers.get("x-signature");
+    const signatureOk = await verifyPhajayWebhookSignature(rawBody, signature);
 
-    // Verify webhook signature
-    if (!(await verifyPhajayWebhook(payload))) {
+    if (!signatureOk) {
       console.warn("Phajay webhook: invalid signature");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      return acknowledge;
     }
 
-    // Only process successful payments
-    if (payload.status !== "success") {
-      return NextResponse.json({ received: true, action: "ignored" });
+    const payload = JSON.parse(rawBody) as PhajayWebhookPayload;
+    if (!isSuccessfulPhajayStatus(payload.status)) {
+      return acknowledge;
     }
 
-    // Parse user ID from order_id format: PKB-{userId}-{timestamp}-{random}
-    const orderParts = payload.order_id.split("-");
-    if (orderParts.length < 2 || orderParts[0] !== "PKB") {
-      console.error("Phajay webhook: invalid order_id format", payload.order_id);
-      return NextResponse.json({ error: "Invalid order_id" }, { status: 400 });
+    const reference = payload.reference;
+    if (!reference) {
+      console.error("Phajay webhook: missing reference", payload);
+      return acknowledge;
     }
 
-    const userId = parseInt(orderParts[1], 10);
-    if (isNaN(userId)) {
-      return NextResponse.json({ error: "Invalid user ID in order" }, { status: 400 });
-    }
+    const now = new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setDate(expiryDate.getDate() + 30);
 
     const supabase = createAdminClient();
 
-    // Get current subscription
-    const { data: currentSub } = await supabase
+    const { data: pendingSub, error: pendingError } = await supabase
       .from("subscriptions")
-      .select("expiry_date")
-      .eq("user_id", userId)
-      .single();
+      .select("id")
+      .eq("payment_ref", reference)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const newExpiry = calculateNewExpiry(currentSub?.expiry_date);
-
-    // Upsert subscription (create or update)
-    const { error: upsertError } = await supabase
-      .from("subscriptions")
-      .upsert(
-        {
-          user_id: userId,
-          status: "active",
-          started_at: new Date().toISOString(),
-          expiry_date: newExpiry.toISOString(),
-          payment_ref: payload.transaction_id,
-          amount_lak: payload.amount,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id" }
-      );
-
-    if (upsertError) {
-      console.error("Phajay webhook: subscription upsert error", upsertError);
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    if (pendingError) {
+      console.error("Phajay webhook: failed to find pending subscription", pendingError);
+      return acknowledge;
     }
 
-    console.log(
-      `✅ Subscription activated for user ${userId} until ${newExpiry.toISOString()}`
-    );
-
-    // Optional: Send confirmation message via Telegram
-    try {
-      const { sendTelegramMessage } = await import("@/lib/telegram");
-      await sendTelegramMessage(
-        userId,
-        `✅ ຊຳລະເງິນສຳເລັດ!\n\n👑 ການສະມາຊິກ Active ແລ້ວ\n📅 ໃຊ້ງານໄດ້ຈົນ: ${newExpiry.toLocaleDateString("lo-LA", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}\n\nຂອບໃຈທີ່ໄວ້ວາງໃຈ ປ້າຂ້າງບ້ານ 🌺`
-      );
-    } catch (msgError) {
-      console.warn("Phajay webhook: failed to send TG message", msgError);
+    if (!pendingSub?.id) {
+      console.warn("Phajay webhook: pending subscription not found", { reference });
+      return acknowledge;
     }
 
-    return NextResponse.json({ success: true, user_id: userId });
+    const { error: updateError } = await supabase
+      .from("subscriptions")
+      .update({
+        status: "active",
+        started_at: now.toISOString(),
+        expiry_date: expiryDate.toISOString(),
+        payment_details: payload,
+        updated_at: now.toISOString(),
+      })
+      .eq("id", pendingSub.id);
+
+    if (updateError) {
+      console.error("Phajay webhook: update subscription failed", updateError);
+      return acknowledge;
+    }
+
+    return acknowledge;
   } catch (error) {
     console.error("Phajay webhook error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Internal error" },
-      { status: 500 }
-    );
+    return acknowledge;
   }
 }

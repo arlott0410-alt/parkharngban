@@ -3,7 +3,7 @@
 // ======================================
 
 export type TransactionType = "income" | "expense";
-export type SubscriptionStatus = "active" | "inactive" | "expired";
+export type SubscriptionStatus = "active" | "inactive" | "expired" | "pending";
 export type CategoryType = "income" | "expense" | "both";
 export type GeminiModel =
   | "gemini-2.0-flash"
@@ -33,6 +33,7 @@ export interface Subscription {
   expiry_date?: string;
   payment_ref?: string;
   amount_lak: number;
+  payment_details?: unknown;
   created_at: string;
   updated_at: string;
   // Joined
@@ -172,29 +173,15 @@ export interface AdminAISettings {
 // Phajay Payment Types
 // ======================================
 
-export interface PhajayCreatePaymentRequest {
-  amount: number; // in LAK
-  order_id: string;
-  description: string;
-  customer_name?: string;
-  redirect_url?: string;
-  webhook_url?: string;
-}
-
-export interface PhajayCreatePaymentResponse {
-  success: boolean;
-  payment_url?: string;
-  transaction_id?: string;
-  error?: string;
-}
-
 export interface PhajayWebhookPayload {
-  transaction_id: string;
-  order_id: string;
+  payment_id?: string;
+  transaction_id?: string;
+  reference: string;
   amount: number;
-  status: "success" | "failed" | "pending";
+  status: "success" | "completed" | "failed" | "pending";
+  currency?: "LAK";
   paid_at?: string;
-  signature: string;
+  [key: string]: unknown;
 }
 
 // ======================================

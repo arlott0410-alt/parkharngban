@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
 import { createPhajayPaymentLink, getSubscriptionAmountLak } from "@/lib/phajay";
 
@@ -7,17 +6,21 @@ export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
   try {
-    const initDataRaw = request.headers.get("x-telegram-init-data") ?? "";
-    const { valid, data: initData } = await validateTelegramInitData(initDataRaw);
+    const body = (await request.json()) as { user_id?: string };
+    const userId = (body.user_id ?? "").trim();
 
-    if (!valid || !initData?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "ບໍ່ພົບ user id" }, { status: 400 });
     }
 
-    const userId = String(initData.user.id);
-    const numericUserId = Number.parseInt(userId, 10);
-    const nowIso = new Date().toISOString();
     const supabase = createAdminClient();
+    const numericUserId = Number.parseInt(userId, 10);
+
+    if (Number.isNaN(numericUserId)) {
+      return NextResponse.json({ error: "user id ບໍ່ຖືກຕ້ອງ" }, { status: 400 });
+    }
+
+    const nowIso = new Date().toISOString();
 
     const { data: activeSubscription, error: activeCheckError } = await supabase
       .from("subscriptions")
@@ -28,7 +31,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (activeCheckError) {
-      console.error("renew-subscription active check error:", activeCheckError);
+      console.error("create-subscription active check error:", activeCheckError);
       return NextResponse.json({ error: "ລະບົບກວດສອບ subscription ຂັດຂ້ອງ" }, { status: 500 });
     }
 
@@ -48,15 +51,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (insertError) {
-      console.error("renew-subscription insert error:", insertError);
+      console.error("create-subscription insert error:", insertError);
       return NextResponse.json({ error: "ບໍ່ສາມາດບັນທຶກການຊຳລະໄດ້" }, { status: 500 });
     }
 
     return NextResponse.json({ payment_url });
   } catch (error) {
-    console.error("renew-subscription error:", error);
+    console.error("create-subscription error:", error);
     return NextResponse.json(
-      { error: "ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່" },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່",
+      },
       { status: 500 }
     );
   }

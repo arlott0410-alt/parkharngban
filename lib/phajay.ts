@@ -1,10 +1,3 @@
-import type {
-  PhajayCreatePaymentRequest,
-  PhajayCreatePaymentResponse,
-  PhajayWebhookPayload,
-} from "@/types";
-import { generateOrderId } from "@/lib/utils";
-
 const textEncoder = new TextEncoder();
 
 function toHex(bytes: Uint8Array): string {
@@ -29,115 +22,107 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
   return toHex(new Uint8Array(signature));
 }
 
-// ======================================
-// Phajay Payment Gateway Client
-// ======================================
-
-const PHAJAY_API_URL = process.env.PHAJAY_API_URL ?? "https://api.phajay.co";
+const PHAJAY_API_URL = process.env.PHAJAY_API_URL ?? "https://payment-gateway.phajay.co/v1/api";
 const PHAJAY_SECRET_KEY = process.env.PHAJAY_SECRET_KEY ?? "";
+const PHAJAY_WEBHOOK_SECRET = process.env.PHAJAY_WEBHOOK_SECRET ?? "";
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
+const PHAJAY_MODE = process.env.PHAJAY_MODE ?? "";
 const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "30000", 10);
 const SUBSCRIPTION_DURATION_DAYS = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
+const APP_URL = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-// ======================================
-// Create Payment Link for Subscription
-// ======================================
-
-export async function createSubscriptionPayment(
-  userId: number,
-  userFirstName: string
-): Promise<PhajayCreatePaymentResponse> {
-  try {
-    const orderId = generateOrderId(userId);
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-
-    const payload: PhajayCreatePaymentRequest = {
-      amount: SUBSCRIPTION_PRICE_LAK,
-      order_id: orderId,
-      description: `ປ້າຂ້າງບ້ານ — ຄ່າສະມາຊິກ ${SUBSCRIPTION_DURATION_DAYS} ວັນ`,
-      customer_name: userFirstName,
-      redirect_url: `${appUrl}/profile?payment=success`,
-      webhook_url: `${appUrl}/api/phajay/webhook`,
-    };
-
-    const signature = await generatePhajaySignature(payload);
-
-    const response = await fetch(`${PHAJAY_API_URL}/v1/payments/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Merchant-ID": PHAJAY_MERCHANT_ID,
-        "X-Signature": signature,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Phajay API error:", errorText);
-      return {
-        success: false,
-        error: `Payment gateway error: ${response.status}`,
-      };
-    }
-
-    const data = (await response.json()) as {
-      payment_url?: string;
-      transaction_id?: string;
-      error?: string;
-    };
-
-    if (!data.payment_url) {
-      return {
-        success: false,
-        error: data.error ?? "No payment URL returned",
-      };
-    }
-
-    return {
-      success: true,
-      payment_url: data.payment_url,
-      transaction_id: data.transaction_id,
-    };
-  } catch (error) {
-    console.error("createSubscriptionPayment error:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+export function isPhajayTestMode(): boolean {
+  return PHAJAY_MODE.toLowerCase() === "test" || PHAJAY_SECRET_KEY.toLowerCase().includes("test");
 }
 
-// ======================================
-// Verify Phajay Webhook Signature
-// ======================================
+export function getSubscriptionAmountLak(): number {
+  if (isPhajayTestMode()) {
+    return 1;
+  }
+  return SUBSCRIPTION_PRICE_LAK;
+}
 
-export async function verifyPhajayWebhook(payload: PhajayWebhookPayload): Promise<boolean> {
+export async function createPhajayPaymentLink(
+  userId: string,
+  amount: number
+): Promise<{ payment_url: string; reference: string }> {
   if (!PHAJAY_SECRET_KEY) {
-    console.warn("PHAJAY_SECRET_KEY not set — skipping webhook verification");
+    throw new Error("PHAJAY_SECRET_KEY is not set");
+  }
+  if (!APP_URL) {
+    throw new Error("APP_URL is not set");
+  }
+
+  const reference = `sub_${userId}_${Date.now()}`;
+  const successUrl = `${APP_URL}/payment/success?ref=${encodeURIComponent(reference)}`;
+  const cancelUrl = `${APP_URL}/payment/cancel`;
+  const webhookUrl = `${APP_URL}/api/phajay/webhook`;
+  const finalAmount = isPhajayTestMode() ? 1 : amount;
+
+  const payload: Record<string, unknown> = {
+    amount: finalAmount,
+    currency: "LAK",
+    description: "ສະມັກບ້ານປາກຫັງ 30 ວັນ",
+    reference,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    webhook_url: webhookUrl,
+  };
+
+  if (PHAJAY_MERCHANT_ID) {
+    payload.merchant_id = PHAJAY_MERCHANT_ID;
+  }
+
+  const response = await fetch(`${PHAJAY_API_URL}/link/payment-link`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${PHAJAY_SECRET_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("Phajay create link failed:", response.status, errorBody);
+    throw new Error("ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່");
+  }
+
+  const data = (await response.json()) as {
+    payment_url?: string;
+    link?: string;
+  };
+
+  const paymentUrl = data.payment_url ?? data.link;
+  if (!paymentUrl) {
+    console.error("Phajay response missing payment URL:", data);
+    throw new Error("ບໍ່ສາມາດສ້າງລິ້ງຊຳລະເງິນໄດ້");
+  }
+
+  return {
+    payment_url: paymentUrl,
+    reference,
+  };
+}
+
+export async function verifyPhajayWebhookSignature(
+  rawBody: string,
+  signature: string | null
+): Promise<boolean> {
+  if (!PHAJAY_WEBHOOK_SECRET) {
     return true;
   }
-
-  const { signature, ...data } = payload;
-
-  // Build canonical string (sorted keys)
-  const keys = Object.keys(data).sort();
-  const canonicalString = keys
-    .map((k) => `${k}=${data[k as keyof typeof data] ?? ""}`)
-    .join("&");
-
-  const expected = await hmacSha256Hex(PHAJAY_SECRET_KEY, canonicalString);
-
-  return expected === signature;
+  if (!signature) {
+    return false;
+  }
+  const expected = await hmacSha256Hex(PHAJAY_WEBHOOK_SECRET, rawBody);
+  return expected.toLowerCase() === signature.toLowerCase();
 }
 
-// ======================================
-// Generate Request Signature
-// ======================================
-
-async function generatePhajaySignature(payload: PhajayCreatePaymentRequest): Promise<string> {
-  const data = JSON.stringify(payload);
-  return hmacSha256Hex(PHAJAY_SECRET_KEY, data);
+export function isSuccessfulPhajayStatus(status: string | undefined): boolean {
+  if (!status) return false;
+  const value = status.toLowerCase();
+  return value === "success" || value === "completed";
 }
 
 // ======================================

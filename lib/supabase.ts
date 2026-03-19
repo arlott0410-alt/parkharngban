@@ -122,28 +122,33 @@ export type Database = {
         Row: {
           id: string;
           user_id: number;
-          status: "active" | "inactive" | "expired";
+          status: "active" | "inactive" | "expired" | "pending";
           started_at: string | null;
           expiry_date: string | null;
           payment_ref: string | null;
           amount_lak: number;
+          payment_details: unknown | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           user_id: number;
-          status?: "active" | "inactive" | "expired";
+          status?: "active" | "inactive" | "expired" | "pending";
           started_at?: string | null;
           expiry_date?: string | null;
           payment_ref?: string | null;
           amount_lak?: number;
+          payment_details?: unknown | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Update: {
-          status?: "active" | "inactive" | "expired";
+          status?: "active" | "inactive" | "expired" | "pending";
           started_at?: string | null;
           expiry_date?: string | null;
           payment_ref?: string | null;
           amount_lak?: number;
+          payment_details?: unknown | null;
           updated_at?: string;
         };
       };
