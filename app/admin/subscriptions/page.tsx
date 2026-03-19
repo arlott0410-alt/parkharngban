@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDateTime, isSubscriptionActive, daysUntilExpiry, formatLAK } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 async function getSubscriptions() {
   const supabase = createAdminClient();

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   try {
     const { initData } = await request.json() as { initData: string };
@@ -9,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ valid: false, error: "Missing initData" }, { status: 400 });
     }
 
-    const result = validateTelegramInitData(initData);
+    const result = await validateTelegramInitData(initData);
 
     if (!result.valid) {
       return NextResponse.json({ valid: false, error: result.error }, { status: 401 });

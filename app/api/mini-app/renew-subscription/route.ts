@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 import { createSubscriptionPayment } from "@/lib/phajay";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   const initDataRaw = request.headers.get("x-telegram-init-data") ?? "";
-  const { valid, data: initData } = validateTelegramInitData(initDataRaw);
+  const { valid, data: initData } = await validateTelegramInitData(initDataRaw);
 
   if (!valid || !initData?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

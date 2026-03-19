@@ -4,6 +4,7 @@ import { RevenueChart, SubscriptionsChart } from "@/components/admin/Charts";
 import type { DashboardStats, MonthlyRevenueData } from "@/types";
 
 export const dynamic = "force-dynamic";
+export const runtime = "edge";
 
 async function getDashboardStats(): Promise<DashboardStats> {
   try {

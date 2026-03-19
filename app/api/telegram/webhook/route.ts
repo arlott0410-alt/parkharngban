@@ -11,6 +11,8 @@ import { createAdminClient } from "@/lib/supabase";
 import { isSubscriptionActive } from "@/lib/utils";
 import type { TelegramUpdate } from "@/types";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   // Validate webhook secret
   const secretHeader = request.headers.get("x-telegram-bot-api-secret-token");

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 // Note: In production, you'd store the custom prompt in Supabase or a KV store.
 // For Cloudflare Pages, use KV or D1 for persistence.
 // This is a simple in-memory store that resets on cold start.

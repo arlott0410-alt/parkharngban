@@ -3,12 +3,14 @@ import { verifyPhajayWebhook, calculateNewExpiry } from "@/lib/phajay";
 import { createAdminClient } from "@/lib/supabase";
 import type { PhajayWebhookPayload } from "@/types";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json() as PhajayWebhookPayload;
 
     // Verify webhook signature
-    if (!verifyPhajayWebhook(payload)) {
+    if (!(await verifyPhajayWebhook(payload))) {
       console.warn("Phajay webhook: invalid signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }

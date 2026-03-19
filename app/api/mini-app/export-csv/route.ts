@@ -3,9 +3,11 @@ import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
 import { isSubscriptionActive, transactionsToCSV } from "@/lib/utils";
 
+export const runtime = "edge";
+
 export async function GET(request: NextRequest) {
   const initDataRaw = request.headers.get("x-telegram-init-data") ?? "";
-  const { valid, data: initData } = validateTelegramInitData(initDataRaw);
+  const { valid, data: initData } = await validateTelegramInitData(initDataRaw);
 
   if (!valid || !initData?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

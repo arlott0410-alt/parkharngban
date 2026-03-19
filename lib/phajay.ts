@@ -1,10 +1,33 @@
-import { createHmac } from "crypto";
 import type {
   PhajayCreatePaymentRequest,
   PhajayCreatePaymentResponse,
   PhajayWebhookPayload,
 } from "@/types";
 import { generateOrderId } from "@/lib/utils";
+
+const textEncoder = new TextEncoder();
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function hmacSha256Hex(key: string, data: string): Promise<string> {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(key) as BufferSource,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    textEncoder.encode(data) as BufferSource
+  );
+  return toHex(new Uint8Array(signature));
+}
 
 // ======================================
 // Phajay Payment Gateway Client
@@ -37,7 +60,7 @@ export async function createSubscriptionPayment(
       webhook_url: `${appUrl}/api/phajay/webhook`,
     };
 
-    const signature = generatePhajaySignature(payload);
+    const signature = await generatePhajaySignature(payload);
 
     const response = await fetch(`${PHAJAY_API_URL}/v1/payments/create`, {
       method: "POST",
@@ -89,7 +112,7 @@ export async function createSubscriptionPayment(
 // Verify Phajay Webhook Signature
 // ======================================
 
-export function verifyPhajayWebhook(payload: PhajayWebhookPayload): boolean {
+export async function verifyPhajayWebhook(payload: PhajayWebhookPayload): Promise<boolean> {
   if (!PHAJAY_SECRET_KEY) {
     console.warn("PHAJAY_SECRET_KEY not set — skipping webhook verification");
     return true;
@@ -103,9 +126,7 @@ export function verifyPhajayWebhook(payload: PhajayWebhookPayload): boolean {
     .map((k) => `${k}=${data[k as keyof typeof data] ?? ""}`)
     .join("&");
 
-  const expected = createHmac("sha256", PHAJAY_SECRET_KEY)
-    .update(canonicalString)
-    .digest("hex");
+  const expected = await hmacSha256Hex(PHAJAY_SECRET_KEY, canonicalString);
 
   return expected === signature;
 }
@@ -114,9 +135,9 @@ export function verifyPhajayWebhook(payload: PhajayWebhookPayload): boolean {
 // Generate Request Signature
 // ======================================
 
-function generatePhajaySignature(payload: PhajayCreatePaymentRequest): string {
+async function generatePhajaySignature(payload: PhajayCreatePaymentRequest): Promise<string> {
   const data = JSON.stringify(payload);
-  return createHmac("sha256", PHAJAY_SECRET_KEY).update(data).digest("hex");
+  return hmacSha256Hex(PHAJAY_SECRET_KEY, data);
 }
 
 // ======================================

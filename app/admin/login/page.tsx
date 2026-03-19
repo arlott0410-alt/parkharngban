@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { Flower2, Shield } from "lucide-react";
 
+export const runtime = "edge";
+
 export default async function AdminLoginPage({
   searchParams,
 }: {

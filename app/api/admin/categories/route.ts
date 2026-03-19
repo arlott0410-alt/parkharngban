@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import type { CategoryFormData } from "@/types";
 
+export const runtime = "edge";
+
 // Verify admin via cookie
 function isAdmin(request: NextRequest): boolean {
   const session = request.cookies.get("admin_session")?.value;

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseTransaction } from "@/lib/gemini";
 import type { GeminiParseRequest } from "@/types";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as GeminiParseRequest & { customPrompt?: string };

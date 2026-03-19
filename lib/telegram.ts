@@ -1,15 +1,39 @@
-import { createHmac } from "crypto";
 import type { TelegramInitData, TelegramUser } from "@/types";
+
+const textEncoder = new TextEncoder();
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function hmacSha256(key: string | Uint8Array, data: string): Promise<Uint8Array> {
+  const keyData = typeof key === "string" ? textEncoder.encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData as BufferSource,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    textEncoder.encode(data) as BufferSource
+  );
+  return new Uint8Array(signature);
+}
 
 // ======================================
 // Validate Telegram WebApp initData (HMAC)
 // ======================================
 
-export function validateTelegramInitData(initDataRaw: string): {
+export async function validateTelegramInitData(initDataRaw: string): Promise<{
   valid: boolean;
   data?: TelegramInitData;
   error?: string;
-} {
+}> {
   try {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!botToken) {
@@ -28,10 +52,8 @@ export function validateTelegramInitData(initDataRaw: string): {
     const dataCheckString = entries.map(([k, v]) => `${k}=${v}`).join("\n");
 
     // HMAC-SHA256: key = HMAC-SHA256("WebAppData", bot_token)
-    const secretKey = createHmac("sha256", "WebAppData").update(botToken).digest();
-    const computedHash = createHmac("sha256", secretKey)
-      .update(dataCheckString)
-      .digest("hex");
+    const secretKey = await hmacSha256("WebAppData", botToken);
+    const computedHash = toHex(await hmacSha256(secretKey, dataCheckString));
 
     if (computedHash !== hash) {
       return { valid: false, error: "Hash mismatch — possible tampering" };
@@ -113,7 +135,7 @@ export async function sendTelegramMessage(
 // Download voice file from Telegram
 // ======================================
 
-export async function downloadVoiceFile(fileId: string): Promise<Buffer | null> {
+export async function downloadVoiceFile(fileId: string): Promise<Uint8Array | null> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) return null;
 
@@ -133,7 +155,7 @@ export async function downloadVoiceFile(fileId: string): Promise<Buffer | null> 
   if (!fileRes.ok) return null;
 
   const arrayBuffer = await fileRes.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return new Uint8Array(arrayBuffer);
 }
 
 // ======================================

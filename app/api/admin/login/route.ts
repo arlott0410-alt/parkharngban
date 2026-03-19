@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const telegramId = formData.get("telegram_id")?.toString().trim();
