@@ -170,7 +170,7 @@ export function TransactionForm({
                 setAiParsed(false);
               }}
             >
-              {aiEnabled ? "ON" : "OFF"}
+              {aiEnabled ? "ເປີດ" : "ປິດ"}
             </Button>
           </div>
 
