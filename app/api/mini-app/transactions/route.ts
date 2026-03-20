@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
-import { isSubscriptionActive } from "@/lib/utils";
+import { isSubscriptionActive, isTrialActive } from "@/lib/utils";
 
 export const runtime = "edge";
 
@@ -46,16 +46,41 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = initData.user.id;
+  const firstName = initData.user.first_name;
+  const lastName = initData.user.last_name ?? null;
+  const username = initData.user.username ?? null;
+  const languageCode = initData.user.language_code ?? "lo";
   const supabase = createAdminClient();
 
-  // Check subscription
-  const { data: subData } = await supabase
-    .from("subscriptions")
-    .select("status, expiry_date")
-    .eq("user_id", userId)
-    .single();
+  // Upsert user record so we can use `created_at` for trial calculation.
+  await supabase.from("users").upsert(
+    {
+      id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      username,
+      language_code: languageCode,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "id" }
+  );
 
-  if (!subData || !isSubscriptionActive(subData.expiry_date)) {
+  const [subRes, userRes] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("expiry_date")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase.from("users").select("created_at").eq("id", userId).maybeSingle(),
+  ]);
+
+  const subData = subRes.data;
+  const userData = userRes.data;
+
+  const subActive = subData ? isSubscriptionActive(subData.expiry_date) : false;
+  const trialActive = isTrialActive(userData?.created_at ?? null);
+
+  if (!subActive && !trialActive) {
     return NextResponse.json(
       { error: "ການສະມາຊິກໝົດອາຍຸ — ກະລຸນາຕໍ່ອາຍຸ" },
       { status: 402 }

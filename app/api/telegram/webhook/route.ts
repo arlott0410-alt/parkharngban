@@ -9,7 +9,7 @@ import {
 import { parseTransaction, matchCategoryByHint } from "@/lib/gemini";
 import { createAdminClient } from "@/lib/supabase";
 import { getAdminSettings } from "@/lib/admin-settings";
-import { isSubscriptionActive } from "@/lib/utils";
+import { isSubscriptionActive, isTrialActive } from "@/lib/utils";
 import type { TelegramUpdate } from "@/types";
 
 export const runtime = "edge";
@@ -135,21 +135,22 @@ export async function POST(request: NextRequest) {
     // ======================================
     const { data: userData } = await supabase
       .from("users")
-      .select("id")
+      .select("id, created_at")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
+
+    const userCreatedAt = userData?.created_at ?? new Date().toISOString();
 
     if (!userData) {
-      // Auto-register user
+      // Auto-register user for trial period
       await supabase.from("users").upsert({
         id: userId,
         first_name: firstName,
         last_name: message.from.last_name ?? null,
         username: message.from.username ?? null,
         language_code: message.from.language_code ?? "lo",
+        updated_at: new Date().toISOString(),
       });
-      await sendTelegramMessage(chatId, buildErrorReply("not_registered"));
-      return NextResponse.json({ ok: true });
     }
 
     // Check subscription
@@ -157,9 +158,12 @@ export async function POST(request: NextRequest) {
       .from("subscriptions")
       .select("status, expiry_date")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
-    if (!subData || !isSubscriptionActive(subData.expiry_date)) {
+    const subActive = subData ? isSubscriptionActive(subData.expiry_date) : false;
+    const trialActive = isTrialActive(userCreatedAt);
+
+    if (!subActive && !trialActive) {
       await sendTelegramMessage(chatId, buildErrorReply("expired"));
       return NextResponse.json({ ok: true });
     }

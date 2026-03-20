@@ -77,6 +77,34 @@ export function daysUntilExpiry(expiry_date?: string | null): number {
 }
 
 // ======================================
+// Free Trial Helpers — new users only
+// ======================================
+const DEFAULT_TRIAL_DURATION_DAYS = parseInt(process.env.TRIAL_DURATION_DAYS ?? "7", 10);
+
+export function trialExpiryDate(created_at?: string | null): Date | null {
+  if (!created_at) return null;
+  const base = new Date(created_at);
+  if (Number.isNaN(base.getTime())) return null;
+
+  const expiry = new Date(base);
+  expiry.setDate(expiry.getDate() + DEFAULT_TRIAL_DURATION_DAYS);
+  return expiry;
+}
+
+export function isTrialActive(created_at?: string | null): boolean {
+  const expiry = trialExpiryDate(created_at);
+  if (!expiry) return false;
+  return expiry > new Date();
+}
+
+export function daysUntilTrialExpiry(created_at?: string | null): number {
+  const expiry = trialExpiryDate(created_at);
+  if (!expiry) return 0;
+  const diff = expiry.getTime() - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+// ======================================
 // Percentage
 // ======================================
 

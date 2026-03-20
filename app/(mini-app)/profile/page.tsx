@@ -21,6 +21,9 @@ import {
   formatLAK,
   isSubscriptionActive,
   daysUntilExpiry,
+  isTrialActive,
+  daysUntilTrialExpiry,
+  trialExpiryDate,
 } from "@/lib/utils";
 import type { Subscription } from "@/types";
 
@@ -30,6 +33,7 @@ interface ProfileData {
     first_name: string;
     last_name?: string;
     username?: string;
+    created_at: string;
   };
   subscription: Subscription | null;
   stats: {
@@ -96,6 +100,9 @@ export default function ProfilePage() {
     : null;
 
   const isActive = data?.subscription ? isSubscriptionActive(data.subscription.expiry_date) : false;
+  const trialActive = isTrialActive(data?.user?.created_at ?? null);
+  const trialDays = trialActive ? daysUntilTrialExpiry(data?.user?.created_at ?? null) : 0;
+  const trialExpiry = trialExpiryDate(data?.user?.created_at ?? null);
   const days = data?.subscription ? daysUntilExpiry(data.subscription.expiry_date) : 0;
 
   return (
@@ -154,10 +161,17 @@ export default function ProfilePage() {
             }`}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Crown className={`h-5 w-5 ${isActive ? "text-emerald-500" : "text-red-500"}`} />
+              <Crown
+                className={`h-5 w-5 ${
+                  isActive ? "text-emerald-500" : trialActive ? "text-amber-500" : "text-red-500"
+                }`}
+              />
               <p className="font-semibold text-sm">ການສະມາຊິກ</p>
-              <Badge variant={isActive ? "active" : "expired"} className="ml-auto">
-                {isActive ? "Active" : "Expired"}
+              <Badge
+                variant={isActive ? "active" : trialActive ? "warning" : "expired"}
+                className="ml-auto"
+              >
+                {isActive ? "Active" : trialActive ? "Trial" : "Expired"}
               </Badge>
             </div>
 
@@ -176,6 +190,25 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
                   <span>ຄ່າສະມາຊິກ: {formatLAK(30000)}/ເດືອນ</span>
+                </div>
+              </div>
+            ) : trialActive ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    ທົດລອງຟຣີ 7 ວັນ: <strong>ໃຊ້ງານໄດ້ຈົນ: {trialExpiry ? formatDateTime(trialExpiry) : "—"}</strong>
+                  </span>
+                </div>
+                {trialDays <= 1 && (
+                  <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>ເຫຼືອອີກ <strong>{trialDays} ວັນ</strong> — ຕໍ່ອາຍຸເລີຍ!</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>ຫຼັງທົດລອງ: {formatLAK(30000)}/ເດືອນ</span>
                 </div>
               </div>
             ) : (
@@ -257,12 +290,12 @@ export default function ProfilePage() {
               onClick={handleExport}
               loading={exportLoading}
               className="w-full gap-2 h-11"
-              disabled={!isActive}
+              disabled={!isActive && !trialActive}
             >
               <Download className="h-4 w-4" />
               Export CSV ທຸລະກຳທັງໝົດ
             </Button>
-            {!isActive && (
+            {!isActive && !trialActive && (
               <p className="text-xs text-center text-muted-foreground mt-2">
                 ຕ້ອງ Active ສະມາຊິກກ່ອນ Export
               </p>
