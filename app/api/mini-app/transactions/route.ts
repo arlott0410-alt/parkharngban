@@ -68,6 +68,8 @@ export async function POST(request: NextRequest) {
     category_id: string;
     description?: string;
     transaction_date: string;
+    raw_text?: string | null;
+    ai_parsed?: boolean;
   };
 
   if (!body.type || !body.amount || body.amount <= 0) {
@@ -82,7 +84,8 @@ export async function POST(request: NextRequest) {
       amount: body.amount,
       category_id: body.category_id || null,
       description: body.description || null,
-      ai_parsed: false,
+      ai_parsed: Boolean(body.ai_parsed),
+      raw_text: body.raw_text ?? null,
       transaction_date: body.transaction_date,
     })
     .select()

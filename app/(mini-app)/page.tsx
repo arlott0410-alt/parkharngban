@@ -73,6 +73,8 @@ export default function HomePage() {
     category_id: string;
     description: string;
     transaction_date: string;
+    raw_text?: string | null;
+    ai_parsed?: boolean;
   }) => {
     const res = await fetch("/api/mini-app/transactions", {
       method: "POST",
@@ -229,6 +231,7 @@ export default function HomePage() {
             categories={categories}
             onSubmit={handleAddTransaction}
             onCancel={() => setDialogOpen(false)}
+            enableAiParse
           />
         </DialogContent>
       </Dialog>
