@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import { isSuccessfulPhajayStatus, verifyPhajayWebhookSignature } from "@/lib/phajay";
+import { verifyPhajayWebhookSignature } from "@/lib/phajay";
 import { createAdminClient } from "@/lib/supabase";
-import type { PhajayWebhookPayload } from "@/types";
 
 export const runtime = "edge";
 
@@ -19,27 +18,47 @@ export async function POST(request: NextRequest) {
       return acknowledge;
     }
 
-    const payload = JSON.parse(rawBody) as PhajayWebhookPayload;
-    if (!isSuccessfulPhajayStatus(payload.status)) {
+    const payload = JSON.parse(rawBody) as {
+      message?: string;
+      status?: string;
+      transactionId?: string;
+      transactionID?: string;
+      paymentTransactionId?: string;
+      authCode?: string;
+      time?: string;
+      [key: string]: unknown;
+    };
+
+    const status = (payload.status ?? "").toUpperCase();
+    const isSuccess = status.includes("SUBSCRIPTION_SUCCESS");
+    if (!isSuccess) {
       return acknowledge;
     }
 
-    const reference = payload.reference;
-    if (!reference) {
-      console.error("Phajay webhook: missing reference", payload);
+    const transactionId = payload.transactionId ?? payload.transactionID;
+    if (!transactionId) {
+      console.error("Phajay webhook: missing transactionId", payload);
       return acknowledge;
     }
 
-    const now = new Date();
-    const expiryDate = new Date(now);
-    expiryDate.setDate(expiryDate.getDate() + 30);
+    const startedAt = (() => {
+      if (!payload.time) return new Date();
+      // Example format: "2025-02-12 14:54:45"
+      const normalized = String(payload.time).replace(" ", "T");
+      const d = new Date(normalized);
+      return Number.isNaN(d.getTime()) ? new Date() : d;
+    })();
+
+    const expiryDate = new Date(startedAt);
+    const durationDays = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
 
     const supabase = createAdminClient();
 
     const { data: pendingSub, error: pendingError } = await supabase
       .from("subscriptions")
       .select("id")
-      .eq("payment_ref", reference)
+      .eq("payment_ref", transactionId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -50,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!pendingSub?.id) {
-      console.warn("Phajay webhook: pending subscription not found", { reference });
+      console.warn("Phajay webhook: pending subscription not found", { transactionId });
       return acknowledge;
     }
 
@@ -58,10 +77,9 @@ export async function POST(request: NextRequest) {
       .from("subscriptions")
       .update({
         status: "active",
-        started_at: now.toISOString(),
+        started_at: startedAt.toISOString(),
         expiry_date: expiryDate.toISOString(),
-        payment_details: payload,
-        updated_at: now.toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .eq("id", pendingSub.id);
 

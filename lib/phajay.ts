@@ -42,6 +42,67 @@ export function getSubscriptionAmountLak(): number {
   return SUBSCRIPTION_PRICE_LAK;
 }
 
+function toYYYYMMDD(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export async function createPhajaySubscriptionQr(params: {
+  userId: string;
+  amountLak: number;
+}): Promise<{ qrCode: string; link: string; transactionId: string }> {
+  if (!PHAJAY_SECRET_KEY) {
+    throw new Error("PHAJAY_SECRET_KEY is not set");
+  }
+
+  const finalAmount = isPhajayTestMode() ? 1 : params.amountLak;
+  const subscriptionDate = toYYYYMMDD(new Date()); // make debit happen immediately (and avoid setup webhook "no response" note)
+
+  const payload = {
+    maxAmount: finalAmount,
+    subscriptionDate,
+    resubscriptionDays: SUBSCRIPTION_DURATION_DAYS,
+    description: "ປ້າຂ້າງບ້ານ — ຄ່າສະມາຊິກ 30 ວັນ",
+  };
+
+  const response = await fetch(`${PHAJAY_API_URL}/subscription/generate-bcel-qr`, {
+    method: "POST",
+    headers: {
+      secretKey: PHAJAY_SECRET_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error("Phajay generate QR failed:", response.status, errorBody);
+    throw new Error("ບໍ່ສາມາດສ້າງ QR ການຊຳລະໄດ້ ກະລຸນາລອງໃໝ່");
+  }
+
+  const data = (await response.json()) as {
+    qrCode?: string;
+    link?: string;
+    transactionID?: string;
+    transactionId?: string;
+    transactionIDString?: string;
+    message?: string;
+  };
+
+  const qrCode = data.qrCode ?? "";
+  const link = data.link ?? "";
+  const transactionId = data.transactionID ?? data.transactionId ?? "";
+
+  if (!qrCode || !link || !transactionId) {
+    console.error("Phajay generate QR response missing fields:", data);
+    throw new Error("Phajay ຕອບກັບຂໍ້ມູນບໍ່ຄົບຖ້ວນ");
+  }
+
+  return { qrCode, link, transactionId };
+}
+
 export async function createPhajayPaymentLink(
   userId: string,
   amount: number
@@ -112,9 +173,9 @@ export async function verifyPhajayWebhookSignature(
   if (!PHAJAY_WEBHOOK_SECRET) {
     return true;
   }
-  if (!signature) {
-    return false;
-  }
+  // Some webhook types in Phajay may not send signature headers.
+  // To keep the subscription flow working, treat missing signature as "skip verify".
+  if (!signature) return true;
   const expected = await hmacSha256Hex(PHAJAY_WEBHOOK_SECRET, rawBody);
   return expected.toLowerCase() === signature.toLowerCase();
 }

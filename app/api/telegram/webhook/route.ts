@@ -79,25 +79,28 @@ export async function POST(request: NextRequest) {
     // Handle /renew command
     // ======================================
     if (text === "/renew" || text === "/subscribe") {
-      const { createPhajayPaymentLink, getSubscriptionAmountLak } = await import("@/lib/phajay");
+      const { createPhajaySubscriptionQr, getSubscriptionAmountLak } = await import("@/lib/phajay");
       const amount = getSubscriptionAmountLak();
-      const { payment_url, reference } = await createPhajayPaymentLink(String(userId), amount);
+      const { link, transactionId } = await createPhajaySubscriptionQr({
+        userId: String(userId),
+        amountLak: amount,
+      });
 
       await supabase.from("subscriptions").insert({
         user_id: userId,
         amount_lak: amount,
-        payment_ref: reference,
-        status: "pending",
+        payment_ref: transactionId,
+        status: "inactive",
       });
 
-      if (payment_url) {
+      if (link) {
         await sendTelegramMessage(
           chatId,
-          `💳 ລິ້ງຊຳລະເງິນ 30,000 ກີບ/ເດືອນ:\n\n${payment_url}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ 30 ນາທີ`,
+          `💳 ກົດເພື່ອສະແກນ/ຊຳລະ subscription 30,000 ກີບ/ເດືອນ:\n\n${link}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ຈົນກວ່າລະບົບຈະປິດ`,
           { disable_notification: false }
         );
       } else {
-        await sendTelegramMessage(chatId, "❌ ສ້າງ link ຊຳລະເງິນບໍ່ໄດ້ ກະລຸນາລອງໃໝ່ 🙏");
+        await sendTelegramMessage(chatId, "❌ ສ້າງ QR ແລະລິ້ງຊຳລະບໍ່ໄດ້ ກະລຸນາລອງໃໝ່ 🙏");
       }
       return NextResponse.json({ ok: true });
     }

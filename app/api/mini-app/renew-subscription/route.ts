@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
-import { createPhajayPaymentLink, getSubscriptionAmountLak } from "@/lib/phajay";
+import { createPhajaySubscriptionQr, getSubscriptionAmountLak } from "@/lib/phajay";
 
 export const runtime = "edge";
 
@@ -37,13 +37,16 @@ export async function POST(request: NextRequest) {
     }
 
     const amount = getSubscriptionAmountLak();
-    const { payment_url, reference } = await createPhajayPaymentLink(userId, amount);
+    const { qrCode, link, transactionId } = await createPhajaySubscriptionQr({
+      userId,
+      amountLak: amount,
+    });
 
     const { error: insertError } = await supabase.from("subscriptions").insert({
       user_id: numericUserId,
       amount_lak: amount,
-      payment_ref: reference,
-      status: "pending",
+      payment_ref: transactionId,
+      status: "inactive",
       created_at: nowIso,
     });
 
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ບໍ່ສາມາດບັນທຶກການຊຳລະໄດ້" }, { status: 500 });
     }
 
-    return NextResponse.json({ payment_url });
+    return NextResponse.json({ qrCode, link, transactionId });
   } catch (error) {
     console.error("renew-subscription error:", error);
     return NextResponse.json(

@@ -33,16 +33,16 @@ export function SubscriptionButton({
         body: JSON.stringify({ user_id: String(userId) }),
       });
 
-      const result = (await res.json()) as { payment_url?: string; error?: string };
-      if (!res.ok || !result.payment_url) {
-        toast.error(result.error ?? "ບໍ່ສາມາດສ້າງລິ້ງຊຳລະເງິນໄດ້");
+      const result = (await res.json()) as { link?: string; qrCode?: string; error?: string };
+      if (!res.ok || !result.link) {
+        toast.error(result.error ?? "ບໍ່ສາມາດສ້າງ QR/ລິ້ງຊຳລະໄດ້");
         return;
       }
 
       if (window.Telegram?.WebApp?.openLink) {
-        window.Telegram.WebApp.openLink(result.payment_url);
+        window.Telegram.WebApp.openLink(result.link);
       } else {
-        window.open(result.payment_url, "_blank", "noopener,noreferrer");
+        window.open(result.link, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
       console.error("SubscriptionButton error:", error);
