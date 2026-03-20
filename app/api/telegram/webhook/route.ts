@@ -14,6 +14,20 @@ import type { TelegramUpdate } from "@/types";
 
 export const runtime = "edge";
 
+function isLikelyTransactionText(t: string): boolean {
+  const text = t.trim();
+  if (text.length < 4) return false;
+
+  const hasDigits = /[0-9໐-໙]/.test(text);
+  if (!hasDigits) return false;
+
+  // Require either kip/currency token or typical keywords.
+  const hasKip = /ກີບ|LAK/i.test(text);
+  const hasTxnKeywords = /ຈ່າຍ|ຊື້|ຮັບ|ໄດ້|ລາຍຈ່າຍ|ລາຍຮັບ|ເງິນເດືອນ|ຄ່າ/i.test(text);
+
+  return hasKip || hasTxnKeywords;
+}
+
 export async function POST(request: NextRequest) {
   // Validate webhook secret
   const secretHeader = request.headers.get("x-telegram-bot-api-secret-token");
@@ -162,6 +176,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse with Gemini
+    if (!isLikelyTransactionText(text)) {
+      // ลดการเรียก Gemini ໂດຍບໍ່ໄດ້ເຂົ້າໃຈວ່າເປັນລາຍຮັບ/ລາຍຈ່າຍ
+      await sendTelegramMessage(chatId, buildErrorReply("parse_failed"));
+      return NextResponse.json({ ok: true });
+    }
+
     const parseResult = await parseTransaction(text);
 
     if (!parseResult.success || !parseResult.transaction) {
