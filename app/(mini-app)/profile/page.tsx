@@ -227,13 +227,27 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <SubscriptionButton
-              userId={tgUser?.id ?? data?.user?.id}
-              isActive={isActive}
-              days={days}
-              loading={renewLoading}
-              onLoadingChange={setRenewLoading}
-            />
+            {isActive ? (
+              <SubscriptionButton
+                userId={tgUser?.id ?? data?.user?.id}
+                isActive={isActive}
+                days={days}
+                loading={renewLoading}
+                onLoadingChange={setRenewLoading}
+              />
+            ) : trialActive ? (
+              <Button variant="outline" className="w-full mt-3 h-11" disabled>
+                ທົດລອງຟຣີ 7 ວັນ (ເຫຼືອ {trialDays} ວັນ)
+              </Button>
+            ) : (
+              <SubscriptionButton
+                userId={tgUser?.id ?? data?.user?.id}
+                isActive={isActive}
+                days={days}
+                loading={renewLoading}
+                onLoadingChange={setRenewLoading}
+              />
+            )}
           </motion.div>
 
           {/* Stats */}
