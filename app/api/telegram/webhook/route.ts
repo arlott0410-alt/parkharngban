@@ -85,10 +85,12 @@ export async function POST(request: NextRequest) {
       const { SUBSCRIPTION_PLANS, getDurationDaysForPlan } = await import("@/lib/subscription-plans");
       const planId = "1m" as const;
       const amount = getSubscriptionAmountLakForPlan(planId);
-      const { link, transactionId } = await createPhajaySubscriptionQr({
+      const phajayResult = await createPhajaySubscriptionQr({
         userId: String(userId),
         planId,
       });
+      const link = phajayResult.link;
+      const transactionId = phajayResult.transactionId;
 
       const planMeta = SUBSCRIPTION_PLANS[planId];
       const nowIso = new Date().toISOString();
@@ -106,10 +108,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (link) {
+      const openUrl = link || phajayResult.qr_image_url || "";
+      if (openUrl) {
         await sendTelegramMessage(
           chatId,
-          `💳 ກົດເພື່ອສະແກນ/ຊຳລະ subscription (1 ເດືອນ):\n\n${link}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ຈົນກວ່າລະບົບຈະປິດ`,
+          `💳 ກົດເພື່ອສະແກນ/ຊຳລະ subscription (1 ເດືອນ):\n\n${openUrl}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ຈົນກວ່າລະບົບຈະປິດ`,
           { disable_notification: false }
         );
       } else {

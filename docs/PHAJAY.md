@@ -68,20 +68,27 @@ Webhook HMAC (`x-phajay-signature`):
 
 ---
 
-## ລາຄາສະມາຊິກ: Test (LAK 1) vs Production
+## ລາຄາສະມາຊິກ: Test vs Production
 
-| `PHAJAY_MODE` | UI + `maxAmount` ໃນ Phajay |
-|---------------|---------------------------|
-| `test` | ທຸກແຜນສະແດງ **1 ກີບ** — ສຳລັບທົດສອບເກດເວຍ (ຈຳກັດຍອດທົດລອງ) |
-| `production` | ຄິດຈາກ `SUBSCRIPTION_PRICE_LAK` × **ເດືອນທີ່ຈ່າຍ** (`lib/phajay.ts` → `getSubscriptionAmountLakForPlan`) |
+ທັງສອງໂໝດໃຊ້ສູດດຽວກັນ: **`SUBSCRIPTION_PRICE_LAK` × ເດືອນທີ່ຈ່າຍ** (`getSubscriptionAmountLakForPlan`). ຕັ້ງ **500** ສຳລັບ sandbox, **30000** (ຫຼືຕາມທີ່ຕ້ອງການ) ສຳລັບ production.
 
-ສູດ Production (ຄ່າເລີ່ມຕົ້ນ `SUBSCRIPTION_PRICE_LAK=30000`):
+| `PHAJAY_MODE` | ຄຳອະທິບາຍ |
+|---------------|------------|
+| `test` | ຍັງໃຊ້ລາຄາຈາກ env (ບໍ່ບັງຄັບ 1 ກີບອີກຕໍ່ໄປ) — log ເຕືອນໃນ server |
+| `production` | ຄືກັນ — ຕັ້ງ `SUBSCRIPTION_PRICE_LAK` ໃຫ້ສູງພໍສຳລັບຊີວິດຈຣິງ |
 
-| ແຜນ | ເດືອນທີ່ຈ່າຍ | ຍອດ LAK (ຕົວຢ່າງ) |
-|-----|-------------|---------------------|
+ຕົວຢ່າງ `SUBSCRIPTION_PRICE_LAK=30000`:
+
+| ແຜນ | ເດືອນທີ່ຈ່າຍ | ຍອດ LAK |
+|-----|-------------|---------|
 | 1m | 1 | 30,000 |
 | 6m | 5 | 150,000 |
 | 12m | 10 | 300,000 |
+
+## BCEL generate-bcel-qr (ປັບປຸງ 2025)
+
+1. **ລຸ້ນໃໝ່:** `Authorization: Basic base64(secretKey + ':')`, body `{ amount, duration_months, reference, callback_url }` → ຕອບອາດມີ `qr_image_url`, `qr_data`, `transaction_id`.
+2. **ລຸ້ນເກົ່າ (fallback):** header `secretKey`, body `maxAmount`, `subscriptionDate`, `resubscriptionDays` — ຖ້າລຸ້ນໃໝ່ບໍ່ຮັບ ຫຼືຂາດ QR ລະບົບລອງ legacy ອັດຕະໂນມັດ.
 
 ປ່ຽນລາຄາຕໍ່ເດືອນ: ຕັ້ງ **`SUBSCRIPTION_PRICE_LAK`** ໃນ env (ຕົວເລກດຽວ — ທັງ UI ຜ່ານ `/api/mini-app/profile` ແລະການຊຳລະຈິງ).
 

@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     const amount = getSubscriptionAmountLakForPlan(planId);
     const planMeta = SUBSCRIPTION_PLANS[planId];
-    const { qrCode, link, transactionId } = await createPhajaySubscriptionQr({
+    const phajayResult = await createPhajaySubscriptionQr({
       userId,
       planId,
     });
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const { error: saveError } = await upsertPendingPhajayPayment(supabase, {
       userId: numericUserId,
       amountLak: amount,
-      paymentRef: transactionId,
+      paymentRef: phajayResult.transactionId,
       nowIso,
       paymentDetails: {
         plan: planId,
@@ -75,9 +75,15 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      qrCode,
-      link,
-      transactionId,
+      success: true,
+      qr_image_url: phajayResult.qr_image_url,
+      qr_data: phajayResult.qr_data,
+      transaction_id: phajayResult.transactionId,
+      link: phajayResult.link,
+      qrCode: phajayResult.qrCode,
+      amount_lak: amount,
+      /** backward compat */
+      transactionId: phajayResult.transactionId,
     });
   } catch (error) {
     console.error("create-subscription error:", error);

@@ -53,14 +53,12 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
+/** ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — test ຕັ້ງ 500, production ຕັ້ງ 30000+ ໃນ env */
 const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "30000", 10);
 const SUBSCRIPTION_DURATION_DAYS = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
 const APP_URL = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 export function getSubscriptionAmountLak(): number {
-  if (isPhajayTestMode()) {
-    return 1;
-  }
   return SUBSCRIPTION_PRICE_LAK;
 }
 
@@ -71,9 +69,6 @@ export function getSubscriptionPriceLak(): number {
 
 export function getSubscriptionAmountLakForPlan(planId: SubscriptionPlanId): number {
   const def = SUBSCRIPTION_PLANS[planId];
-  if (isPhajayTestMode()) {
-    return 1;
-  }
   return SUBSCRIPTION_PRICE_LAK * def.monthsCharged;
 }
 
@@ -123,10 +118,129 @@ function toYYYYMMDD(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Basic Auth ແບບ Phajay docs: `Buffer.from(key + ':').toString('base64')`
+ * ໃຊ້ btoa ເພື່ອຮອງຮັບ Edge runtime (ບໍ່ມີ Node Buffer)
+ */
+function phajayBasicAuthHeader(secretKey: string): string {
+  return `Basic ${btoa(`${secretKey}:`)}`;
+}
+
+export type PhajayBcelQrResult = {
+  transactionId: string;
+  link: string;
+  qrCode: string;
+  qr_image_url: string | null;
+  qr_data: string | null;
+  amount_lak: number;
+};
+
+function unwrapPhajayJson(raw: Record<string, unknown>): Record<string, unknown> {
+  if (raw.data && typeof raw.data === "object" && raw.data !== null) {
+    return raw.data as Record<string, unknown>;
+  }
+  return raw;
+}
+
+function normalizeBcelQrPayload(
+  data: Record<string, unknown>,
+  amount_lak: number
+): PhajayBcelQrResult {
+  const transactionId = String(
+    data.transactionID ?? data.transactionId ?? data.transaction_id ?? ""
+  );
+  const link = String(
+    data.link ?? data.payment_url ?? data.paymentUrl ?? data.url ?? ""
+  );
+  const qr_image_url = data.qr_image_url ?? data.qrImageUrl ?? data.image_url ?? null;
+  const qr_data = data.qr_data ?? data.qrData ?? null;
+  let qrCode = String(data.qrCode ?? data.qr_code ?? "");
+  if (!qrCode && qr_data) {
+    qrCode = String(qr_data);
+  }
+  return {
+    transactionId,
+    link,
+    qrCode,
+    qr_image_url: qr_image_url != null ? String(qr_image_url) : null,
+    qr_data: qr_data != null ? String(qr_data) : null,
+    amount_lak,
+  };
+}
+
+function bcelResultIsUsable(r: PhajayBcelQrResult): boolean {
+  return Boolean(
+    r.transactionId && (r.link || r.qr_image_url || r.qrCode || r.qr_data)
+  );
+}
+
+/**
+ * Fallback: ເກົ່າເຄີຍໃຊ້ header `secretKey` + maxAmount/subscriptionDate/resubscriptionDays
+ * ຖ້າ Basic + body ໃໝ່ບໍ່ຖືກຕ້ອງກັບເກດເວຍລຸ້ນເກົ່າ
+ */
+async function createPhajaySubscriptionQrLegacy(params: {
+  planId: SubscriptionPlanId;
+  amountLak: number;
+}): Promise<PhajayBcelQrResult> {
+  const secretKey = getPhajayApiSecretKey();
+  const baseUrl = getPhajayApiBaseUrl();
+  const subscriptionDate = toYYYYMMDD(new Date());
+  const payload = {
+    maxAmount: params.amountLak,
+    subscriptionDate,
+    resubscriptionDays: SUBSCRIPTION_DURATION_DAYS,
+    description: buildSubscriptionQrDescription(params.planId),
+  };
+
+  phajayLog("info", "Phajay BCEL legacy request", {
+    endpoint: `${baseUrl}/subscription/generate-bcel-qr`,
+    planId: params.planId,
+    maxAmount: params.amountLak,
+  });
+
+  const response = await fetch(`${baseUrl}/subscription/generate-bcel-qr`, {
+    method: "POST",
+    headers: {
+      secretKey: secretKey!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await response.text();
+  phajayLog("info", "Phajay BCEL legacy response", {
+    status: response.status,
+    bodyPreview: text.slice(0, 1200),
+  });
+
+  if (!response.ok) {
+    throw new Error("ບໍ່ສາມາດສ້າງ QR ການຊຳລະໄດ້ ກະລຸນາລອງໃໝ່");
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error("Phajay ຕອບບໍ່ແມ່ນ JSON");
+  }
+  const data = unwrapPhajayJson(parsed);
+  const normalized = normalizeBcelQrPayload(data, params.amountLak);
+  if (!bcelResultIsUsable(normalized)) {
+    throw new Error("Phajay ຕອບກັບຂໍ້ມູນບໍ່ຄົບຖ້ວນ");
+  }
+  return normalized;
+}
+
+/**
+ * POST /subscription/generate-bcel-qr
+ *
+ * ລຸ້ນໃໝ່ (ຕາມ Phajay): Authorization Basic, body { amount, duration_months, reference, callback_url }
+ * ຖ້າບໍ່ສຳເລັດ ຫຼືຂາດ QR — ລອງ legacy secretKey (ຫຼາຍ merchant ຍັງໃຊ້ຢູ່)
+ */
 export async function createPhajaySubscriptionQr(params: {
   userId: string;
   planId?: SubscriptionPlanId;
-}): Promise<{ qrCode: string; link: string; transactionId: string }> {
+}): Promise<PhajayBcelQrResult> {
   const secretKey = getPhajayApiSecretKey();
   if (!secretKey) {
     const mode = getPhajayMode();
@@ -137,63 +251,75 @@ export async function createPhajaySubscriptionQr(params: {
     );
   }
 
+  const appBase = APP_URL?.trim();
+  if (!appBase) {
+    throw new Error("APP_URL is not set — ຕ້ອງມີເພື່ອ callback_url");
+  }
+
   const planId: SubscriptionPlanId = params.planId ?? "1m";
-  const finalAmount = getSubscriptionAmountLakForPlan(planId);
+  const amountLak = getSubscriptionAmountLakForPlan(planId);
+  const durationMonths = SUBSCRIPTION_PLANS[planId].monthsCovered;
+  const reference = `${params.userId}_${Date.now()}`;
+  const callbackUrl = `${appBase.replace(/\/$/, "")}/api/phajay/webhook`;
   const baseUrl = getPhajayApiBaseUrl();
+  const endpoint = `${baseUrl}/subscription/generate-bcel-qr`;
 
-  const subscriptionDate = toYYYYMMDD(new Date()); // make debit happen immediately (and avoid setup webhook "no response" note)
+  if (isPhajayTestMode()) {
+    phajayLog("warn", "PHAJAY_MODE=test — ຍອດຈາກ SUBSCRIPTION_PRICE_LAK × ເດືອນທີ່ຈ່າຍ (ຕັ້ງ 500 ໃນ env ສຳລັບ sandbox)", {
+      amountLak,
+      durationMonths,
+      reference,
+    });
+  }
 
-  // Phajay = ຊຳລະເງິນເທົ່ານັ້ນ — ຄ່ານີ້ແມ່ນພາລາມິເຕີຂອງເກດເວຍ (ຮອບຕໍ່ໄປຕາມສັນຍາ BCEL) ບໍ່ແມ່ນອາຍຸໃຊ້ງານໃນແອັບ
-  const payload = {
-    maxAmount: finalAmount,
-    subscriptionDate,
-    resubscriptionDays: SUBSCRIPTION_DURATION_DAYS,
-    description: buildSubscriptionQrDescription(planId),
+  const bodyNew = {
+    amount: amountLak,
+    duration_months: durationMonths,
+    reference,
+    callback_url: callbackUrl,
   };
 
-  phajayLog("info", "generate-bcel-qr request", {
-    endpoint: `${baseUrl}/subscription/generate-bcel-qr`,
-    planId,
-    maxAmount: finalAmount,
+  phajayLog("info", "Phajay BCEL request (Basic + amount/duration_months)", {
+    endpoint,
+    body: bodyNew,
   });
 
-  const response = await fetch(`${baseUrl}/subscription/generate-bcel-qr`, {
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: {
-      secretKey,
+      Authorization: phajayBasicAuthHeader(secretKey),
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(bodyNew),
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    phajayLog("error", "generate-bcel-qr failed", {
+  const text = await response.text();
+  phajayLog("info", "Phajay BCEL primary response", {
+    status: response.status,
+    bodyPreview: text.slice(0, 1200),
+  });
+
+  if (response.ok) {
+    try {
+      const parsed = JSON.parse(text) as Record<string, unknown>;
+      const data = unwrapPhajayJson(parsed);
+      const normalized = normalizeBcelQrPayload(data, amountLak);
+      if (bcelResultIsUsable(normalized)) {
+        return normalized;
+      }
+      phajayLog("warn", "primary BCEL response missing QR/link — trying legacy");
+    } catch (e) {
+      phajayLog("error", "primary BCEL JSON parse failed", {
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  } else {
+    phajayLog("warn", "primary BCEL not OK — trying legacy secretKey payload", {
       status: response.status,
-      body: errorBody.slice(0, 500),
     });
-    throw new Error("ບໍ່ສາມາດສ້າງ QR ການຊຳລະໄດ້ ກະລຸນາລອງໃໝ່");
   }
 
-  const data = (await response.json()) as {
-    qrCode?: string;
-    link?: string;
-    transactionID?: string;
-    transactionId?: string;
-    transactionIDString?: string;
-    message?: string;
-  };
-
-  const qrCode = data.qrCode ?? "";
-  const link = data.link ?? "";
-  const transactionId = data.transactionID ?? data.transactionId ?? "";
-
-  if (!qrCode || !link || !transactionId) {
-    console.error("Phajay generate QR response missing fields:", data);
-    throw new Error("Phajay ຕອບກັບຂໍ້ມູນບໍ່ຄົບຖ້ວນ");
-  }
-
-  return { qrCode, link, transactionId };
+  return createPhajaySubscriptionQrLegacy({ planId, amountLak });
 }
 
 export async function createPhajayPaymentLink(
@@ -213,7 +339,8 @@ export async function createPhajayPaymentLink(
   const successUrl = `${APP_URL}/payment/success?ref=${encodeURIComponent(reference)}`;
   const cancelUrl = `${APP_URL}/payment/cancel`;
   const webhookUrl = `${APP_URL}/api/phajay/webhook`;
-  const finalAmount = isPhajayTestMode() ? 1 : amount;
+  /** test: ຍອດຈາກ SUBSCRIPTION_PRICE_LAK (ເຊັນ 500) ແທນ 1 ກີບ */
+  const finalAmount = isPhajayTestMode() ? getSubscriptionPriceLak() : amount;
 
   const payload: Record<string, unknown> = {
     amount: finalAmount,
