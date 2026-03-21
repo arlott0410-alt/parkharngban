@@ -212,7 +212,9 @@ export default function ProfilePage() {
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>ຫຼັງທົດລອງ: {formatLAK(monthlyLak)}/ເດືອນ</span>
+                  <span>
+                    ສາມາດສະໝັກສະມາຊິກໄດ້ທັນທີ (ລາຍເດືອນ / ໂປຣໂມ) — ຄ່າເລີ່ມຕົ້ນ {formatLAK(monthlyLak)}/ເດືອນ
+                  </span>
                 </div>
               </div>
             ) : (
@@ -231,29 +233,14 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {isActive ? (
-              <SubscriptionButton
-                userId={tgUser?.id ?? data?.user?.id}
-                isActive={isActive}
-                days={days}
-                loading={renewLoading}
-                onLoadingChange={setRenewLoading}
-                plans={data?.subscription_plans}
-              />
-            ) : trialActive ? (
-              <Button variant="outline" className="w-full mt-3 h-11" disabled>
-                ທົດລອງຟຣີ 7 ວັນ (ເຫຼືອ {trialDays} ວັນ)
-              </Button>
-            ) : (
-              <SubscriptionButton
-                userId={tgUser?.id ?? data?.user?.id}
-                isActive={isActive}
-                days={days}
-                loading={renewLoading}
-                onLoadingChange={setRenewLoading}
-                plans={data?.subscription_plans}
-              />
-            )}
+            <SubscriptionButton
+              userId={tgUser?.id ?? data?.user?.id}
+              isActive={isActive}
+              days={days}
+              loading={renewLoading}
+              onLoadingChange={setRenewLoading}
+              plans={data?.subscription_plans}
+            />
           </motion.div>
 
           {/* Stats */}
