@@ -112,6 +112,19 @@ Webhook HMAC (`x-phajay-signature`):
 
 ---
 
+## ຖ້າ QR ສຳເລັດ (200) ແຕ່ subscription ຍັງ inactive
+
+**ສາເຫດທົ່ວໄປ:** ການສ້າງ QR ສຳເລັດແມ່ນແຄ່ຂັ້ນຕອນທີ 1 — ການເປີດສະມາຊິກອັດຕະໂນມັດຕ້ອງໄດ້ຮັບ **POST webhook** ຫຼັງລູກຄ້າໂອນຈິງ. ຖ້າບໍ່ມີ webhook ຫຼືກວດບໍ່ຜ່ານ ສະຖານະຈະບໍ່ປ່ຽນ.
+
+| ກວດ | ລາຍລະອຽດ |
+|-----|-----------|
+| **Webhook URL** | ຕ້ອງກົງກັບ `APP_URL` / ໂດເມນທີ່ deploy — ຕົວຢ່າງ `https://<domain>/api/phajay/webhook` ລົງທະບຽນໃນແຜງ Phajay |
+| **ລາຍເຊັນ** | ຖ້າ `x-phajay-signature` ບໍ່ກົງກັບ `PHAJAY_WEBHOOK_SECRET_*` ຈະໄດ້ 401 — ບໍ່ມີການອັບເດດ DB. Test ຊົ່ວຄາວ: `PHAJAY_ALLOW_UNSIGNED_WEBHOOKS=true` (ບໍ່ໃຊ້ production) |
+| **ຮູບແບບ payload** | ໂຄ້ດຮອງຮັບ `status` / `message` / `data.*` ແລະຫຼາຍຊ່ອງ `transactionId` — ຖ້າຍັງບໍ່ຂຶ້ນ active ເບິ່ງ log server ບັນທຶກ `webhook: ignored` ຫຼື `no pending subscription` |
+| **payment_ref** | ຕ້ອງກົງກັບ `transactionId` ທີ່ Phajay ສົ່ງຕອນໂອນສຳເລັດ (ຫຼືກົງກັບ `payment_details.bcel.transactionId`) |
+
+---
+
 ## ອ້າງອີງໂຄ້ດ
 
 | ໄຟລ໌ | ໜ້າທີ່ |
@@ -121,6 +134,7 @@ Webhook HMAC (`x-phajay-signature`):
 | `lib/subscription-plans.ts` | ນິຍາມແຜນ 1m / 6m / 12m ແລະ `duration_days` ຝັ່ງເຮົາ |
 | `app/api/phajay/create-subscription/route.ts` | ສ້າງ QR + ບັນທຶກ pending subscription |
 | `app/api/phajay/webhook/route.ts` | ຮັບຊຳລະສຳເລັດ → ເປີດສະມາຊິກຕາມ `duration_days` |
+| `lib/phajay-webhook.ts` | ກວດຄວາມສຳເລັດ + ລວບລວມ transaction id ຈາກ payload |
 | `app/api/phajay/subscription-setup/route.ts` | ຮັບເຫດເຊື່ອມຕໍ່ subscription (ຖ້າມີ) |
 
 ---

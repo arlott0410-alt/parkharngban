@@ -4,6 +4,10 @@ import {
   redactTransactionId,
   phajayLog,
 } from "@/lib/phajay";
+import {
+  collectPhajayTransactionIdCandidates,
+  isPhajaySubscriptionPaymentSuccess,
+} from "@/lib/phajay-webhook";
 import { createAdminClient } from "@/lib/supabase";
 
 export const runtime = "edge";
@@ -13,24 +17,63 @@ export const dynamic = "force-dynamic";
 
 const ACK_OK = new Response("OK", { status: 200 });
 
-/**
- * ກວດວ່າ payload ຈາກ Phajay ແມ່ນເຫດຊຳລະ subscription ສຳເລັດ
- * (ຊື່ status ອາດຕ່າງກັນລະຫວ່າງ test/prod — ກວດຫຼາຍແບບ)
- */
-function isPhajaySubscriptionSuccessStatus(statusRaw: string | undefined): boolean {
-  const s = (statusRaw ?? "").toUpperCase();
-  if (!s) return false;
-  if (s.includes("SUBSCRIPTION_SUCCESS")) return true;
-  if (s.includes("SUBSCRIPTION_DEBIT_SUCCESS")) return true;
-  if (s.includes("DEBIT_SUCCESS") && s.includes("SUBSCRIPTION")) return true;
-  return false;
-}
-
 export async function GET() {
   return new Response(JSON.stringify({ service: "phajay-webhook", method: "POST only" }), {
     status: 405,
     headers: { Allow: "POST", "Content-Type": "application/json" },
   });
+}
+
+/**
+ * ຫາແຖວ subscription ລໍຖ້າຊຳລະ ທີ່ກົງກັບ transaction id ຈາກ webhook
+ */
+async function findPendingSubscriptionByTransactionCandidates(
+  supabase: ReturnType<typeof createAdminClient>,
+  candidates: string[],
+  requestId: string
+): Promise<{ id: string; payment_details: unknown } | null> {
+  if (candidates.length === 0) return null;
+
+  const { data: byRef, error: refErr } = await supabase
+    .from("subscriptions")
+    .select("id, payment_details")
+    .in("payment_ref", candidates)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (refErr) {
+    phajayLog("error", "webhook: supabase select by payment_ref failed", {
+      requestId,
+      error: refErr.message,
+    });
+    return null;
+  }
+
+  if (byRef?.id) return byRef;
+
+  /** ຖ້າ Phajay ສົ່ງ id ຄົນລະກັບ payment_ref ແຕ່ກົງກັບ bcel.transactionId ໃນ JSON */
+  for (const tid of candidates) {
+    const { data: byJson, error: jsonErr } = await supabase
+      .from("subscriptions")
+      .select("id, payment_details")
+      .filter("payment_details->bcel->>transactionId", "eq", tid)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (jsonErr) {
+      phajayLog("warn", "webhook: json path lookup failed", {
+        requestId,
+        error: jsonErr.message,
+        transactionId: redactTransactionId(tid),
+      });
+      continue;
+    }
+    if (byJson?.id) return byJson;
+  }
+
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,69 +105,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let payload: {
-      message?: string;
-      status?: string;
-      transactionId?: string;
-      transactionID?: string;
-      paymentTransactionId?: string;
-      authCode?: string;
-      time?: string;
-      [key: string]: unknown;
-    };
+    let payload: Record<string, unknown>;
 
     try {
-      payload = JSON.parse(rawBody) as typeof payload;
+      payload = JSON.parse(rawBody) as Record<string, unknown>;
     } catch {
       phajayLog("error", "webhook: invalid JSON", { requestId });
       return new Response("Invalid JSON", { status: 400 });
     }
 
-    const status = payload.status;
-    if (!isPhajaySubscriptionSuccessStatus(status)) {
-      phajayLog("info", "webhook: ignored (not subscription success)", {
+    if (!isPhajaySubscriptionPaymentSuccess(payload)) {
+      phajayLog("info", "webhook: ignored (not subscription payment success)", {
         requestId,
-        status: status ?? "(empty)",
+        status: typeof payload.status === "string" ? payload.status : "(none)",
+        message: typeof payload.message === "string" ? payload.message.slice(0, 120) : "(none)",
+        keys: Object.keys(payload),
       });
       return ACK_OK;
     }
 
-    const transactionId = payload.transactionId ?? payload.transactionID;
-    if (!transactionId || typeof transactionId !== "string") {
-      phajayLog("error", "webhook: missing transactionId", { requestId, payloadKeys: Object.keys(payload) });
+    const candidates = collectPhajayTransactionIdCandidates(payload);
+    if (candidates.length === 0) {
+      phajayLog("error", "webhook: no transaction id in payload", {
+        requestId,
+        payloadKeys: Object.keys(payload),
+      });
       return ACK_OK;
     }
 
+    const transactionId = candidates[0];
+
+    const timeRaw =
+      typeof payload.time === "string"
+        ? payload.time
+        : payload.data &&
+            typeof payload.data === "object" &&
+            payload.data !== null &&
+            typeof (payload.data as Record<string, unknown>).time === "string"
+          ? String((payload.data as Record<string, unknown>).time)
+          : undefined;
+
     const startedAt = (() => {
-      if (!payload.time) return new Date();
-      const normalized = String(payload.time).replace(" ", "T");
+      if (!timeRaw) return new Date();
+      const normalized = String(timeRaw).replace(" ", "T");
       const d = new Date(normalized);
       return Number.isNaN(d.getTime()) ? new Date() : d;
     })();
 
     const supabase = createAdminClient();
 
-    const { data: pendingSub, error: pendingError } = await supabase
-      .from("subscriptions")
-      .select("id, payment_details")
-      .eq("payment_ref", transactionId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (pendingError) {
-      phajayLog("error", "webhook: supabase select failed", {
-        requestId,
-        error: pendingError.message,
-        transactionId: redactTransactionId(transactionId),
-      });
-      return ACK_OK;
-    }
+    const pendingSub = await findPendingSubscriptionByTransactionCandidates(
+      supabase,
+      candidates,
+      requestId
+    );
 
     if (!pendingSub?.id) {
-      phajayLog("warn", "webhook: no pending subscription for transaction", {
+      phajayLog("warn", "webhook: no pending subscription for transaction candidates", {
         requestId,
-        transactionId: redactTransactionId(transactionId),
+        candidates: candidates.map((c) => redactTransactionId(c)),
       });
       return ACK_OK;
     }
