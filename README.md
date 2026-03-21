@@ -110,7 +110,9 @@ https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://pah-khaang-b
 
 ## Supabase Database Schema
 
-Run this SQL in your Supabase SQL editor:
+**ໄຟລ໌ພ້ອມຮັນ:** ເບິ່ງໂຟນເດີ [`sql/`](sql/) — `01_initial_schema.sql` (ໃໝ່), `02_upgrade_existing.sql` (ອັບເກຣດຖານເກົ່າ).
+
+ຫຼື Copy ຈາກລຸ່ມນີ້ໄປ SQL Editor:
 
 ```sql
 -- Users table (synced from Telegram)
