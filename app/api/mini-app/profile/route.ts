@@ -31,7 +31,13 @@ export async function GET(request: NextRequest) {
 
   const [userRes, subRes, statsRes] = await Promise.all([
     supabase.from("users").select("*").eq("id", userId).single(),
-    supabase.from("subscriptions").select("*").eq("user_id", userId).single(),
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
     supabase.from("transactions").select("type, amount, created_at").eq("user_id", userId),
   ]);
 
