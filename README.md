@@ -70,7 +70,7 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `NEXT_PUBLIC_APP_URL` | Your Cloudflare Pages URL (fallback ຂອງ APP_URL) |
 | `ADMIN_TELEGRAM_ID` | Your personal Telegram user ID |
 | `WEBHOOK_SECRET` | Random secret for webhook validation |
-| `SUBSCRIPTION_PRICE_LAK` | `30000` |
+| `SUBSCRIPTION_PRICE_LAK` | ລາຄາຕໍ່ເດືອນ (ກີບ) — ຕົວຢ່າງ `50000`; ແຜນ 6m = ×5, 12m = ×10 |
 | `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
 
 > ຫຼັງ deploy: ລົງທະບຽນ **Webhook URL** ໃນແຜງ Phajay ໃຫ້ຊີ້ມາ `https://<YOUR_DOMAIN>/api/phajay/webhook` (ເບິ່ງ [`docs/PHAJAY.md`](docs/PHAJAY.md)).
