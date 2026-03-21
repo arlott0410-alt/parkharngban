@@ -21,6 +21,7 @@
 ### Admin — ຈັດການສະມາຊິກລູກຄ້າ
 - ໜ້າ **`/admin/users`** ແລະ **`/admin/subscriptions`**: ປຸ່ມ **ເພີ່ມສະມາຊິກ / ຕໍ່ອາຍຸ** (ໃສ່ຈຳນວນວັນ) ແລະ **ຍົກເລີກ** — ເອີ້ນ `POST /api/admin/subscriptions/manage` (`action: grant | revoke`, ກວດ cookie `admin_session`)
 - **grant**: ຖ້າຍັງມີອາຍຸຢູ່ ຈະຕໍ່ຈາກວັນໝົດເກົ່າ; ຖ້າບໍ່ມີແຖວ subscription ຈະສ້າງໃໝ່ ຕາມ `SUBSCRIPTION_PRICE_LAK` ໃນ env (ຕົວຢ່າງ 50000 ກີບ)
+- **revoke ຫຼັງລູກຄ້າຊຳລະແລ້ວ:** ລະບົບຕັ້ງ `status=expired` + ວັນໝົດໃນອະດີດ — ການສ້າງ QR (`/api/phajay/create-subscription`) ກວດແຕ່ວ່າມີແຖວ **`active` + ວັນໝົດຍັງບໍ່ມາຮອດ** ຫຼືບໍ່ — **ຫຼັງຍົກເລີກຈຶ່ງຍັງສາມາດສ້າງ QR ຊຳລະໃໝ່ໄດ້** (ບໍ່ຕິດສະຖານະ “ມີ subscription active” ອີກ). Cooldown QR cache ໃຊ້ແຕ່ `status=inactive` — ບໍ່ກັນຫຼັງ revoke.
 
 ---
 

@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     const nowIso = new Date().toISOString();
 
+    /** ກວດແຕ່ “ຊຳລະແລ້ວຍັງໃຊ້ງານ” — ຫຼັງ admin revoke ເປັນ expired ຈຶ່ງບໍ່ຕິດ 409; ລູກຄ້າສ້າງ QR ຊຳລະໃໝ່ໄດ້ */
     const { data: activeSubscription, error: activeCheckError } = await supabase
       .from("subscriptions")
       .select("id")
