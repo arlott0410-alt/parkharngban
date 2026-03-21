@@ -24,9 +24,14 @@ type SubscriptionButtonProps = {
   plans?: SubscriptionPlanOption[];
 };
 
-/** ຄຳຕອບຈາກ /api/phajay/create-subscription */
+/** ຄຳຕອບຈາກ POST /api/phajay/create-subscription */
 type CreateSubscriptionResponse = {
   success?: boolean;
+  /** URL ຮູບ QR ຈາກ Phajay (qrCode ຈາກ API — ມັກເປັນ https) */
+  qrCodeUrl?: string;
+  /** onepay / enpay deep link */
+  deepLink?: string;
+  amount?: number;
   qr_image_url?: string | null;
   qr_data?: string | null;
   qrCode?: string;
@@ -38,7 +43,8 @@ type CreateSubscriptionResponse = {
 };
 
 function qrImageSrc(r: CreateSubscriptionResponse): string | null {
-  if (r.qr_image_url) return r.qr_image_url;
+  if (r.qrCodeUrl?.trim()) return r.qrCodeUrl.trim();
+  if (r.qr_image_url?.trim()) return r.qr_image_url.trim();
   const raw = r.qrCode ?? r.qr_data;
   if (!raw || !String(raw).trim()) return null;
   const s = String(raw).trim();
@@ -47,8 +53,13 @@ function qrImageSrc(r: CreateSubscriptionResponse): string | null {
   return `data:image/png;base64,${s}`;
 }
 
+function deepLinkHref(r: CreateSubscriptionResponse): string | null {
+  const u = r.deepLink?.trim() || r.link?.trim();
+  return u || null;
+}
+
 function hasPaymentSurface(r: CreateSubscriptionResponse): boolean {
-  return Boolean(r.link?.trim() || qrImageSrc(r));
+  return Boolean(qrImageSrc(r) || deepLinkHref(r));
 }
 
 export function SubscriptionButton({
@@ -62,6 +73,8 @@ export function SubscriptionButton({
   const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanOption["id"]>("1m");
   const [qrOpen, setQrOpen] = useState(false);
   const [payResult, setPayResult] = useState<CreateSubscriptionResponse | null>(null);
+  /** ຂະນະຮ້ອງສ້າງ QR — ຄວບຄູ່ກັບ loading ຈາກ parent */
+  const [generating, setGenerating] = useState(false);
 
   const list = useMemo(
     () => (plans.length > 0 ? plans : null),
@@ -84,6 +97,7 @@ export function SubscriptionButton({
       return;
     }
 
+    setGenerating(true);
     onLoadingChange(true);
     try {
       const res = await fetch("/api/phajay/create-subscription", {
@@ -95,7 +109,13 @@ export function SubscriptionButton({
         }),
       });
 
-      const result = (await res.json()) as CreateSubscriptionResponse;
+      let result: CreateSubscriptionResponse;
+      try {
+        result = (await res.json()) as CreateSubscriptionResponse;
+      } catch {
+        toast.error("ຕອບກັບບໍ່ແມ່ນ JSON");
+        return;
+      }
 
       if (!res.ok) {
         toast.error(result.error ?? "ບໍ່ສາມາດສ້າງການຊຳລະໄດ້");
@@ -107,32 +127,35 @@ export function SubscriptionButton({
         return;
       }
 
-      const tx =
-        result.transaction_id ?? result.transactionId;
+      const tx = result.transaction_id ?? result.transactionId;
       if (!tx) {
         toast.error("ບໍ່ມີ transaction id ຈາກ Phajay");
+        console.warn("[SubscriptionButton] missing transactionId", result);
         return;
       }
 
       if (!hasPaymentSurface(result)) {
-        toast.error(
-          "ບໍ່ມີ QR ຫຼືລິ້ງຊຳລະຈາກ Phajay — ກວດ console ຝັ່ງເຊີເວີ ຫຼືລອງໃໝ່"
-        );
+        toast.error("ບໍ່ມີ QR ຫຼືລິ້ງຊຳລະຈາກ Phajay");
+        console.warn("[SubscriptionButton] no QR/link", result);
         return;
       }
 
       setPayResult(result);
       setQrOpen(true);
     } catch (error) {
-      console.error("SubscriptionButton error:", error);
+      console.error("SubscriptionButton fetch error:", error);
       toast.error("ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່");
     } finally {
+      setGenerating(false);
       onLoadingChange(false);
     }
   };
 
   const imgSrc = payResult ? qrImageSrc(payResult) : null;
-  const displayAmount = payResult?.amount_lak ?? selected?.amount_lak;
+  const displayAmount =
+    payResult?.amount ?? payResult?.amount_lak ?? selected?.amount_lak;
+  const bcelLink = payResult ? deepLinkHref(payResult) : null;
+  const busy = loading || generating;
 
   return (
     <div className="w-full mt-3 space-y-2">
@@ -171,7 +194,8 @@ export function SubscriptionButton({
 
       <Button
         onClick={handleSubscribe}
-        loading={loading}
+        loading={busy}
+        disabled={busy}
         className={`w-full gap-2 ${isActive && days > 7 ? "h-9 text-sm" : "h-11"}`}
         variant={isActive && days > 7 ? "outline" : "default"}
       >
@@ -196,38 +220,42 @@ export function SubscriptionButton({
             <DialogTitle>ຊຳລະສະມາຊິກ</DialogTitle>
             <DialogDescription>
               {displayAmount != null
-                ? `ຍອດ ${formatLAK(displayAmount)} — ສະແກນ QR ຫຼືເປີດລິ້ງ`
-                : "ສະແກນ QR ຫຼືເປີດລິ້ງຊຳລະ"}
+                ? `ຍອດ ${formatLAK(displayAmount)}`
+                : "ສະແກນ QR ຫຼືເປີດໃນ BCEL"}
             </DialogDescription>
           </DialogHeader>
 
           {imgSrc && (
-            <div className="flex justify-center rounded-xl border bg-white p-3 dark:bg-zinc-900">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imgSrc}
-                alt="BCEL QR"
-                className="h-64 w-64 max-w-full object-contain"
-              />
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-sm text-center text-muted-foreground">
+                ສະແກນ QR ດ້ວຍ BCEL
+              </p>
+              <div className="flex justify-center rounded-xl border bg-white p-3 dark:bg-zinc-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imgSrc}
+                  alt="BCEL QR"
+                  className="h-64 w-64 max-w-full object-contain"
+                />
+              </div>
             </div>
           )}
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
-            {payResult?.link ? (
+            {bcelLink ? (
               <Button
                 type="button"
                 className="w-full gap-2"
                 onClick={() => {
-                  const u = payResult.link!;
                   if (window.Telegram?.WebApp?.openLink) {
-                    window.Telegram.WebApp.openLink(u);
+                    window.Telegram.WebApp.openLink(bcelLink);
                   } else {
-                    window.open(u, "_blank", "noopener,noreferrer");
+                    window.open(bcelLink, "_blank", "noopener,noreferrer");
                   }
                 }}
               >
                 <ExternalLink className="h-4 w-4" />
-                ເປີດລິ້ງຊຳລະ
+                ເປີດໃນ BCEL App
               </Button>
             ) : null}
             <Button

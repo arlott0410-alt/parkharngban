@@ -53,23 +53,33 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
-/** ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — test ຕັ້ງ 500, production ຕັ້ງ 30000+ ໃນ env */
+/** Production: ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) */
 const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "30000", 10);
+/**
+ * Test/sandbox: ຍອດຕໍ່ເດືອນສຳລັບທັງ UI ແລະ maxAmount ສົ່ງ Phajay (ບໍ່ເກີນ limit ທົດລອງ)
+ * @see SUBSCRIPTION_TEST_AMOUNT ໃນ .env.example
+ */
+const SUBSCRIPTION_TEST_AMOUNT = parseInt(process.env.SUBSCRIPTION_TEST_AMOUNT ?? "500", 10);
 const SUBSCRIPTION_DURATION_DAYS = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
 const APP_URL = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
 
+/** ລາຄາຕໍ່ 1 ເດືອນຕາມໂໝດ — test ໃຊ້ SUBSCRIPTION_TEST_AMOUNT, production ໃຊ້ SUBSCRIPTION_PRICE_LAK */
+function getMonthlyPriceLak(): number {
+  return isPhajayTestMode() ? SUBSCRIPTION_TEST_AMOUNT : SUBSCRIPTION_PRICE_LAK;
+}
+
 export function getSubscriptionAmountLak(): number {
-  return SUBSCRIPTION_PRICE_LAK;
+  return getMonthlyPriceLak();
 }
 
 /** ລາຄາຕໍ່ເດືອນ (ຈາກ env) — ສຳລັບສະແດງ */
 export function getSubscriptionPriceLak(): number {
-  return SUBSCRIPTION_PRICE_LAK;
+  return getMonthlyPriceLak();
 }
 
 export function getSubscriptionAmountLakForPlan(planId: SubscriptionPlanId): number {
   const def = SUBSCRIPTION_PLANS[planId];
-  return SUBSCRIPTION_PRICE_LAK * def.monthsCharged;
+  return getMonthlyPriceLak() * def.monthsCharged;
 }
 
 export type SubscriptionPlanDisplay = {
@@ -152,11 +162,15 @@ function normalizeBcelQrPayload(
   const link = String(
     data.link ?? data.payment_url ?? data.paymentUrl ?? data.url ?? ""
   );
-  const qr_image_url = data.qr_image_url ?? data.qrImageUrl ?? data.image_url ?? null;
   const qr_data = data.qr_data ?? data.qrData ?? null;
+  /** Phajay ສົ່ງ qrCode ເປັນ URL ຮູບ QR (ເຊັນ qrserver.com) ຫຼື base64 — ສຳຄັນຕໍ່ການສະແດງໃນ <img> */
   let qrCode = String(data.qrCode ?? data.qr_code ?? "");
   if (!qrCode && qr_data) {
     qrCode = String(qr_data);
+  }
+  let qr_image_url = data.qr_image_url ?? data.qrImageUrl ?? data.image_url ?? null;
+  if (!qr_image_url && qrCode && /^https?:\/\//i.test(qrCode.trim())) {
+    qr_image_url = qrCode.trim();
   }
   return {
     transactionId,
@@ -228,6 +242,12 @@ async function createPhajaySubscriptionQrLegacy(params: {
   if (!bcelResultIsUsable(normalized)) {
     throw new Error("Phajay ຕອບກັບຂໍ້ມູນບໍ່ຄົບຖ້ວນ");
   }
+  console.log("[phajay] BCEL legacy OK", {
+    transactionId: normalized.transactionId,
+    qrCodeIsUrl: /^https?:\/\//i.test(normalized.qrCode?.trim() ?? ""),
+    hasLink: Boolean(normalized.link),
+    amountLak: params.amountLak,
+  });
   return normalized;
 }
 
@@ -265,7 +285,7 @@ export async function createPhajaySubscriptionQr(params: {
   const endpoint = `${baseUrl}/subscription/generate-bcel-qr`;
 
   if (isPhajayTestMode()) {
-    phajayLog("warn", "PHAJAY_MODE=test — ຍອດຈາກ SUBSCRIPTION_PRICE_LAK × ເດືອນທີ່ຈ່າຍ (ຕັ້ງ 500 ໃນ env ສຳລັບ sandbox)", {
+    phajayLog("warn", "PHAJAY_MODE=test — ຍອດຈາກ SUBSCRIPTION_TEST_AMOUNT × ເດືອນທີ່ຈ່າຍ (default 500)", {
       amountLak,
       durationMonths,
       reference,
@@ -305,6 +325,12 @@ export async function createPhajaySubscriptionQr(params: {
       const data = unwrapPhajayJson(parsed);
       const normalized = normalizeBcelQrPayload(data, amountLak);
       if (bcelResultIsUsable(normalized)) {
+        console.log("[phajay] BCEL primary OK", {
+          transactionId: normalized.transactionId,
+          qrCodeIsUrl: /^https?:\/\//i.test(normalized.qrCode?.trim() ?? ""),
+          hasLink: Boolean(normalized.link),
+          amountLak,
+        });
         return normalized;
       }
       phajayLog("warn", "primary BCEL response missing QR/link — trying legacy");
@@ -470,7 +496,7 @@ export function calculateNewExpiry(currentExpiry?: string | null): Date {
 // ======================================
 
 export function getSubscriptionPriceDisplay(): string {
-  return new Intl.NumberFormat("lo-LA").format(SUBSCRIPTION_PRICE_LAK) + " ກີບ/ເດືອນ";
+  return new Intl.NumberFormat("lo-LA").format(getMonthlyPriceLak()) + " ກີບ/ເດືອນ";
 }
 
 // ======================================

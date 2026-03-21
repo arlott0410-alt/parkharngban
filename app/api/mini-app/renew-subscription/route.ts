@@ -80,16 +80,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ບໍ່ສາມາດບັນທຶກການຊຳລະໄດ້" }, { status: 500 });
     }
 
-    return NextResponse.json({
-      success: true,
+    const qrCodeUrl =
+      phajayResult.qr_image_url?.trim() ||
+      (phajayResult.qrCode?.trim().startsWith("http")
+        ? phajayResult.qrCode.trim()
+        : "") ||
+      phajayResult.qrCode ||
+      "";
+
+    const payload = {
+      success: true as const,
+      qrCodeUrl,
+      deepLink: phajayResult.link,
+      transactionId: phajayResult.transactionId,
+      amount,
       qr_image_url: phajayResult.qr_image_url,
       qr_data: phajayResult.qr_data,
       transaction_id: phajayResult.transactionId,
       link: phajayResult.link,
       qrCode: phajayResult.qrCode,
       amount_lak: amount,
+    };
+
+    console.log("[renew-subscription] Phajay OK", {
       transactionId: phajayResult.transactionId,
+      hasQrCodeUrl: Boolean(qrCodeUrl),
+      amount,
     });
+
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("renew-subscription error:", error);
     return NextResponse.json(
