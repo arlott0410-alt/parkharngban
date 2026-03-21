@@ -68,6 +68,25 @@ Webhook HMAC (`x-phajay-signature`):
 
 ---
 
+## ລາຄາສະມາຊິກ: Test (LAK 1) vs Production
+
+| `PHAJAY_MODE` | UI + `maxAmount` ໃນ Phajay |
+|---------------|---------------------------|
+| `test` | ທຸກແຜນສະແດງ **1 ກີບ** — ສຳລັບທົດສອບເກດເວຍ (ຈຳກັດຍອດທົດລອງ) |
+| `production` | ຄິດຈາກ `SUBSCRIPTION_PRICE_LAK` × **ເດືອນທີ່ຈ່າຍ** (`lib/phajay.ts` → `getSubscriptionAmountLakForPlan`) |
+
+ສູດ Production (ຄ່າເລີ່ມຕົ້ນ `SUBSCRIPTION_PRICE_LAK=30000`):
+
+| ແຜນ | ເດືອນທີ່ຈ່າຍ | ຍອດ LAK (ຕົວຢ່າງ) |
+|-----|-------------|---------------------|
+| 1m | 1 | 30,000 |
+| 6m | 5 | 150,000 |
+| 12m | 10 | 300,000 |
+
+ປ່ຽນລາຄາຕໍ່ເດືອນ: ຕັ້ງ **`SUBSCRIPTION_PRICE_LAK`** ໃນ env (ຕົວເລກດຽວ — ທັງ UI ຜ່ານ `/api/mini-app/profile` ແລະການຊຳລະຈິງ).
+
+---
+
 ## ສິ່ງທີ່ຕ້ອງຕັ້ງຄ່ານອກຈາກໂຄ້ດ
 
 1. **Environment** — ເບິ່ງ `.env.example` (ຫຼື Cloudflare Pages):
