@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
-import { createPhajaySubscriptionQr, getSubscriptionAmountLak } from "@/lib/phajay";
+import {
+  createPhajaySubscriptionQr,
+  getSubscriptionAmountLakForPlan,
+} from "@/lib/phajay";
+import {
+  parseSubscriptionPlanId,
+  SUBSCRIPTION_PLANS,
+  getDurationDaysForPlan,
+} from "@/lib/subscription-plans";
 
 export const runtime = "edge";
 
@@ -18,6 +26,16 @@ export async function POST(request: NextRequest) {
     const numericUserId = Number.parseInt(userId, 10);
     const nowIso = new Date().toISOString();
     const supabase = createAdminClient();
+
+    let planId = parseSubscriptionPlanId("1m");
+    try {
+      const body = (await request.json()) as { plan?: string };
+      if (body?.plan) {
+        planId = parseSubscriptionPlanId(body.plan);
+      }
+    } catch {
+      // no body
+    }
 
     const { data: activeSubscription, error: activeCheckError } = await supabase
       .from("subscriptions")
@@ -36,10 +54,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "ມີ subscription ແອກທິບຢູ່ແລ້ວ" }, { status: 409 });
     }
 
-    const amount = getSubscriptionAmountLak();
+    const amount = getSubscriptionAmountLakForPlan(planId);
+    const planMeta = SUBSCRIPTION_PLANS[planId];
     const { qrCode, link, transactionId } = await createPhajaySubscriptionQr({
       userId,
-      amountLak: amount,
+      planId,
     });
 
     const { error: insertError } = await supabase.from("subscriptions").insert({
@@ -48,6 +67,12 @@ export async function POST(request: NextRequest) {
       payment_ref: transactionId,
       status: "inactive",
       created_at: nowIso,
+      payment_details: {
+        plan: planId,
+        duration_days: getDurationDaysForPlan(planId),
+        months_charged: planMeta.monthsCharged,
+        months_covered: planMeta.monthsCovered,
+      },
     });
 
     if (insertError) {

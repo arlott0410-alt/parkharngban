@@ -25,7 +25,7 @@ import {
   daysUntilTrialExpiry,
   trialExpiryDate,
 } from "@/lib/utils";
-import type { Subscription } from "@/types";
+import type { Subscription, SubscriptionPlanOption } from "@/types";
 
 interface ProfileData {
   user: {
@@ -36,6 +36,7 @@ interface ProfileData {
     created_at: string;
   };
   subscription: Subscription | null;
+  subscription_plans?: SubscriptionPlanOption[];
   stats: {
     total_transactions: number;
     total_income: number;
@@ -104,6 +105,9 @@ export default function ProfilePage() {
   const trialDays = trialActive ? daysUntilTrialExpiry(data?.user?.created_at ?? null) : 0;
   const trialExpiry = trialExpiryDate(data?.user?.created_at ?? null);
   const days = data?.subscription ? daysUntilExpiry(data.subscription.expiry_date) : 0;
+
+  const monthlyLak =
+    data?.subscription_plans?.find((p) => p.id === "1m")?.amount_lak ?? 30000;
 
   return (
     <div className="min-h-screen bg-background">
@@ -189,7 +193,7 @@ export default function ProfilePage() {
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>ຄ່າສະມາຊິກ: {formatLAK(30000)}/ເດືອນ</span>
+                  <span>ຄ່າສະມາຊິກ: {formatLAK(monthlyLak)}/ເດືອນ</span>
                 </div>
               </div>
             ) : trialActive ? (
@@ -208,7 +212,7 @@ export default function ProfilePage() {
                 )}
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>ຫຼັງທົດລອງ: {formatLAK(30000)}/ເດືອນ</span>
+                  <span>ຫຼັງທົດລອງ: {formatLAK(monthlyLak)}/ເດືອນ</span>
                 </div>
               </div>
             ) : (
@@ -222,7 +226,7 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  ສະໝັກ {formatLAK(30000)}/ເດືອນ ເພື່ອໃຊ້ງານຕໍ່
+                  ສະໝັກ {formatLAK(monthlyLak)}/ເດືອນ ຂຶ້ນໄປ (ມີແຜນ 6/12 ເດືອນໂປຣໂມ)
                 </p>
               </div>
             )}
@@ -234,6 +238,7 @@ export default function ProfilePage() {
                 days={days}
                 loading={renewLoading}
                 onLoadingChange={setRenewLoading}
+                plans={data?.subscription_plans}
               />
             ) : trialActive ? (
               <Button variant="outline" className="w-full mt-3 h-11" disabled>
@@ -246,6 +251,7 @@ export default function ProfilePage() {
                 days={days}
                 loading={renewLoading}
                 onLoadingChange={setRenewLoading}
+                plans={data?.subscription_plans}
               />
             )}
           </motion.div>

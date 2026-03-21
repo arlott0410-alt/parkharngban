@@ -1,0 +1,17 @@
+---
+description: After finishing code edits, commit and push to GitHub
+alwaysApply: true
+---
+
+# Git — push ຫຼັງແກ້ໂຄ້ດ
+
+ເມື່ອແກ້ໂຄ້ດໃນໂປຣເຈັກນີ້ຈົນເສັດຕາມທີ່ຜູ້ໃຊ້ຂໍ:
+
+1. `git status` — ກວດວ່າມີໄຟລ໌ທີ່ປ່ຽນ
+2. `git add` ໄຟລ໌ທີ່ກ່ຽວຂ້ອງ (ຫຼື `git add -A` ຖ້າສົມຄວນ)
+3. `git commit -m "..."` ຂໍ້ຄວາມສັ້ນໆ ອະທິບາຍການປ່ຽນ
+4. `git push origin` (ສາຂາ `main` ຫຼືສາຂາທີ່ໃຊ້ຢູ່)
+
+ຖ້າຍັງບໍ່ມີການປ່ຽນ (clean working tree) ບໍ່ຕ້ອງ push.
+
+ຖ້າ push ລົ້ມເຫຼວ (auth / network) ແຈ້ງຜູ້ໃຊ້ໃຫ້ຊັດເຈນ.

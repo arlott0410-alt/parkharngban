@@ -79,24 +79,35 @@ export async function POST(request: NextRequest) {
     // Handle /renew command
     // ======================================
     if (text === "/renew" || text === "/subscribe") {
-      const { createPhajaySubscriptionQr, getSubscriptionAmountLak } = await import("@/lib/phajay");
-      const amount = getSubscriptionAmountLak();
+      const { createPhajaySubscriptionQr, getSubscriptionAmountLakForPlan } = await import(
+        "@/lib/phajay"
+      );
+      const { SUBSCRIPTION_PLANS, getDurationDaysForPlan } = await import("@/lib/subscription-plans");
+      const planId = "1m" as const;
+      const amount = getSubscriptionAmountLakForPlan(planId);
       const { link, transactionId } = await createPhajaySubscriptionQr({
         userId: String(userId),
-        amountLak: amount,
+        planId,
       });
 
+      const planMeta = SUBSCRIPTION_PLANS[planId];
       await supabase.from("subscriptions").insert({
         user_id: userId,
         amount_lak: amount,
         payment_ref: transactionId,
         status: "inactive",
+        payment_details: {
+          plan: planId,
+          duration_days: getDurationDaysForPlan(planId),
+          months_charged: planMeta.monthsCharged,
+          months_covered: planMeta.monthsCovered,
+        },
       });
 
       if (link) {
         await sendTelegramMessage(
           chatId,
-          `💳 ກົດເພື່ອສະແກນ/ຊຳລະ subscription 30,000 ກີບ/ເດືອນ:\n\n${link}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ຈົນກວ່າລະບົບຈະປິດ`,
+          `💳 ກົດເພື່ອສະແກນ/ຊຳລະ subscription (1 ເດືອນ):\n\n${link}\n\n⏰ ລິ້ງນີ້ໃຊ້ໄດ້ຈົນກວ່າລະບົບຈະປິດ`,
           { disable_notification: false }
         );
       } else {

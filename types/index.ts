@@ -4,6 +4,17 @@
 
 export type TransactionType = "income" | "expense";
 export type SubscriptionStatus = "active" | "inactive" | "expired" | "pending";
+
+/** ສຳລັບ UI + API profile — ລາຄາຄິດໄລ່ຝັ່ງເຊີເວີ */
+export type SubscriptionPlanOption = {
+  id: "1m" | "6m" | "12m";
+  label: string;
+  promo?: string;
+  amount_lak: number;
+  duration_days: number;
+  months_covered: number;
+  months_charged: number;
+};
 export type CategoryType = "income" | "expense" | "both";
 export type GeminiModel =
   | "gemini-2.0-flash"

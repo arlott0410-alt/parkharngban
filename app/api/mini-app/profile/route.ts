@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateTelegramInitData } from "@/lib/telegram";
 import { createAdminClient } from "@/lib/supabase";
+import { getSubscriptionPlansForDisplay } from "@/lib/phajay";
 
 export const runtime = "edge";
 
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     user: userRes.data,
     subscription: subRes.data ?? null,
+    subscription_plans: getSubscriptionPlansForDisplay(),
     stats: {
       total_transactions: stats.length,
       total_income: totalIncome,

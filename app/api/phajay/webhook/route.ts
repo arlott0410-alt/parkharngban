@@ -49,15 +49,11 @@ export async function POST(request: NextRequest) {
       return Number.isNaN(d.getTime()) ? new Date() : d;
     })();
 
-    const expiryDate = new Date(startedAt);
-    const durationDays = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
-    expiryDate.setDate(expiryDate.getDate() + durationDays);
-
     const supabase = createAdminClient();
 
     const { data: pendingSub, error: pendingError } = await supabase
       .from("subscriptions")
-      .select("id")
+      .select("id, payment_details")
       .eq("payment_ref", transactionId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -72,6 +68,15 @@ export async function POST(request: NextRequest) {
       console.warn("Phajay webhook: pending subscription not found", { transactionId });
       return acknowledge;
     }
+
+    const details = pendingSub.payment_details as { duration_days?: number } | null;
+    const durationDays =
+      typeof details?.duration_days === "number" && details.duration_days > 0
+        ? details.duration_days
+        : parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
+
+    const expiryDate = new Date(startedAt);
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
 
     const { error: updateError } = await supabase
       .from("subscriptions")

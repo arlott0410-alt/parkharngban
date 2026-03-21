@@ -1,3 +1,9 @@
+import {
+  type SubscriptionPlanId,
+  SUBSCRIPTION_PLANS,
+  getDurationDaysForPlan,
+} from "@/lib/subscription-plans";
+
 const textEncoder = new TextEncoder();
 
 function toHex(bytes: Uint8Array): string {
@@ -42,6 +48,58 @@ export function getSubscriptionAmountLak(): number {
   return SUBSCRIPTION_PRICE_LAK;
 }
 
+/** ລາຄາຕໍ່ເດືອນ (ຈາກ env) — ສຳລັບສະແດງ */
+export function getSubscriptionPriceLak(): number {
+  return SUBSCRIPTION_PRICE_LAK;
+}
+
+export function getSubscriptionAmountLakForPlan(planId: SubscriptionPlanId): number {
+  const def = SUBSCRIPTION_PLANS[planId];
+  if (isPhajayTestMode()) {
+    return 1;
+  }
+  return SUBSCRIPTION_PRICE_LAK * def.monthsCharged;
+}
+
+export type SubscriptionPlanDisplay = {
+  id: SubscriptionPlanId;
+  label: string;
+  promo?: string;
+  amount_lak: number;
+  duration_days: number;
+  months_covered: number;
+  months_charged: number;
+};
+
+export function getSubscriptionPlansForDisplay(): SubscriptionPlanDisplay[] {
+  const ids: SubscriptionPlanId[] = ["1m", "6m", "12m"];
+  return ids.map((id) => {
+    const def = SUBSCRIPTION_PLANS[id];
+    return {
+      id,
+      label: def.labelLo,
+      promo: def.promoLo,
+      amount_lak: getSubscriptionAmountLakForPlan(id),
+      duration_days: getDurationDaysForPlan(id),
+      months_covered: def.monthsCovered,
+      months_charged: def.monthsCharged,
+    };
+  });
+}
+
+/**
+ * ຂໍ້ຄວາມໃບບິນ/QR — ບອກຊຸດສິນຄ້າເທົ່ານັ້ນ
+ * ອາຍຸການໃຊ້ງານຈິງຢູ່ຝັ່ງເຮົາ (payment_details + webhook) ບໍ່ແມ່ນ Phajay
+ */
+function buildSubscriptionQrDescription(planId: SubscriptionPlanId): string {
+  const def = SUBSCRIPTION_PLANS[planId];
+  if (planId === "1m") {
+    return "ປ້າຂ້າງບ້ານ — ສະມາຊິກ 1 ເດືອນ";
+  }
+  const promo = def.promoLo ? ` (${def.promoLo})` : "";
+  return `ປ້າຂ້າງບ້ານ — ສະມາຊິກ ${def.labelLo}${promo}`;
+}
+
 function toYYYYMMDD(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -51,20 +109,23 @@ function toYYYYMMDD(date: Date): string {
 
 export async function createPhajaySubscriptionQr(params: {
   userId: string;
-  amountLak: number;
+  planId?: SubscriptionPlanId;
 }): Promise<{ qrCode: string; link: string; transactionId: string }> {
   if (!PHAJAY_SECRET_KEY) {
     throw new Error("PHAJAY_SECRET_KEY is not set");
   }
 
-  const finalAmount = isPhajayTestMode() ? 1 : params.amountLak;
+  const planId: SubscriptionPlanId = params.planId ?? "1m";
+  const finalAmount = getSubscriptionAmountLakForPlan(planId);
+
   const subscriptionDate = toYYYYMMDD(new Date()); // make debit happen immediately (and avoid setup webhook "no response" note)
 
+  // Phajay = ຊຳລະເງິນເທົ່ານັ້ນ — ຄ່ານີ້ແມ່ນພາລາມິເຕີຂອງເກດເວຍ (ຮອບຕໍ່ໄປຕາມສັນຍາ BCEL) ບໍ່ແມ່ນອາຍຸໃຊ້ງານໃນແອັບ
   const payload = {
     maxAmount: finalAmount,
     subscriptionDate,
     resubscriptionDays: SUBSCRIPTION_DURATION_DAYS,
-    description: "ປ້າຂ້າງບ້ານ — ຄ່າສະມາຊິກ 30 ວັນ",
+    description: buildSubscriptionQrDescription(planId),
   };
 
   const response = await fetch(`${PHAJAY_API_URL}/subscription/generate-bcel-qr`, {
