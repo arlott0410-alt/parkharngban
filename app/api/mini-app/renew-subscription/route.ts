@@ -75,11 +75,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (saveError) {
-      console.error("renew-subscription save pending error:", saveError);
-      return NextResponse.json({ error: "ບໍ່ສາມາດບັນທຶກການຊຳລະໄດ້" }, { status: 500 });
-    }
-
     const qrCodeUrl =
       phajayResult.qr_image_url?.trim() ||
       (phajayResult.qrCode?.trim().startsWith("http")
@@ -100,12 +95,18 @@ export async function POST(request: NextRequest) {
       link: phajayResult.link,
       qrCode: phajayResult.qrCode,
       amount_lak: amount,
+      pendingSaveFailed: Boolean(saveError),
     };
+
+    if (saveError) {
+      console.error("renew-subscription save pending error (still returning QR):", saveError);
+    }
 
     console.log("[renew-subscription] Phajay OK", {
       transactionId: phajayResult.transactionId,
       hasQrCodeUrl: Boolean(qrCodeUrl),
       amount,
+      pendingSaveFailed: payload.pendingSaveFailed,
     });
 
     return NextResponse.json(payload);

@@ -39,6 +39,8 @@ type CreateSubscriptionResponse = {
   transaction_id?: string;
   transactionId?: string;
   amount_lak?: number;
+  /** true ຖ້າບັນທຶກລໍຖ້າໃນ DB ລົ້ມ — QR ຍັງໃຊ້ໄດ້ */
+  pendingSaveFailed?: boolean;
   error?: string;
 };
 
@@ -138,6 +140,12 @@ export function SubscriptionButton({
         toast.error("ບໍ່ມີ QR ຫຼືລິ້ງຊຳລະຈາກ Phajay");
         console.warn("[SubscriptionButton] no QR/link", result);
         return;
+      }
+
+      if (result.pendingSaveFailed) {
+        toast.warning(
+          "ບັນທຶກລໍຖ້າຊຳລະຊົ່ວຄາວບໍ່ສຳເລັດ — ສາມາດສະແກນ QR ຕາມປົກກະຕິ; ຖ້າຊຳລະແລ້ວບໍ່ອັບເດດ ກະລຸນາຕິດຕໍ່ແອດມິນ"
+        );
       }
 
       setPayResult(result);
