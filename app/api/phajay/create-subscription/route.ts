@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_PLANS,
   getDurationDaysForPlan,
 } from "@/lib/subscription-plans";
+import { upsertPendingPhajayPayment } from "@/lib/subscription-pending";
 
 export const runtime = "edge";
 
@@ -55,13 +56,12 @@ export async function POST(request: NextRequest) {
       planId,
     });
 
-    const { error: insertError } = await supabase.from("subscriptions").insert({
-      user_id: numericUserId,
-      amount_lak: amount,
-      payment_ref: transactionId,
-      status: "inactive",
-      created_at: nowIso,
-      payment_details: {
+    const { error: saveError } = await upsertPendingPhajayPayment(supabase, {
+      userId: numericUserId,
+      amountLak: amount,
+      paymentRef: transactionId,
+      nowIso,
+      paymentDetails: {
         plan: planId,
         duration_days: getDurationDaysForPlan(planId),
         months_charged: planMeta.monthsCharged,
@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (insertError) {
-      console.error("create-subscription insert error:", insertError);
+    if (saveError) {
+      console.error("create-subscription save pending error:", saveError);
       return NextResponse.json({ error: "ບໍ່ສາມາດບັນທຶກການຊຳລະໄດ້" }, { status: 500 });
     }
 

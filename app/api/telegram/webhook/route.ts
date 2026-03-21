@@ -91,12 +91,14 @@ export async function POST(request: NextRequest) {
       });
 
       const planMeta = SUBSCRIPTION_PLANS[planId];
-      await supabase.from("subscriptions").insert({
-        user_id: userId,
-        amount_lak: amount,
-        payment_ref: transactionId,
-        status: "inactive",
-        payment_details: {
+      const nowIso = new Date().toISOString();
+      const { upsertPendingPhajayPayment } = await import("@/lib/subscription-pending");
+      await upsertPendingPhajayPayment(supabase, {
+        userId,
+        amountLak: amount,
+        paymentRef: transactionId,
+        nowIso,
+        paymentDetails: {
           plan: planId,
           duration_days: getDurationDaysForPlan(planId),
           months_charged: planMeta.monthsCharged,
