@@ -72,6 +72,9 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `WEBHOOK_SECRET` | Random secret for webhook validation |
 | `SUBSCRIPTION_PRICE_LAK` | ລາຄາຕໍ່ເດືອນ (ກີບ) — ຕົວຢ່າງ `50000`; ແຜນ 6m = ×5, 12m = ×10 |
 | `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
+| `SUBSCRIPTION_QR_COOLDOWN_SECONDS` | `120` (default) — ຫຼັງສ້າງ QR ສຳເລັດ ຖ້າກົດຊ້ຳໃນ cooldown ຈະຄືນ QR ເກົ່າຈາກ DB (ຫຼຸດ spam / ຫຼາຍບິນ Phajay) |
+
+**ການກົດສ້າງ QR ຊ້ຳ / ຫຼາຍຜູ້ໃຊ້ພ້ອມກັນ:** ຝັ່ງ Mini App ມີ lock ກົດຊ້ຳ; ຝັ່ງ API ຄືນ QR ຈາກ `payment_details.bcel` ຖ້າຍັງຢູ່ໃນ cooldown. **ບໍ່ມີການໂອນ “ປະສານຂ້າມຜູ້ໃຊ້”** — ທຸກຄຳຂໍໃຊ້ `user_id` ຂອງ Telegram ຜູກກັບແຖວ `subscriptions` ຂອງຄົນນັ້ນເທົ່ານັ້ນ. ຖ້າຜູ້ໃຊ້ຄົນດຽວກົດພ້ອມກັນຫຼາຍ request (ເກີດໄດ້ຫຼາຍກວ່າ UI) ອາດມີຫຼາຍ `transactionId` ຈາກ Phajay — ຫຼຸດດ້ວຍ cooldown + lock.
 
 > ຫຼັງ deploy: ລົງທະບຽນ **Webhook URL** ໃນແຜງ Phajay ໃຫ້ຊີ້ມາ `https://<YOUR_DOMAIN>/api/phajay/webhook` (ເບິ່ງ [`docs/PHAJAY.md`](docs/PHAJAY.md)).
 

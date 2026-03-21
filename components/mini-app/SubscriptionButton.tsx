@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +41,8 @@ type CreateSubscriptionResponse = {
   amount_lak?: number;
   /** true ຖ້າບັນທຶກລໍຖ້າໃນ DB ລົ້ມ — QR ຍັງໃຊ້ໄດ້ */
   pendingSaveFailed?: boolean;
+  /** ຄືນ QR ຈາກ DB (cooldown) — ບໍ່ເອີ້ນ Phajay ຊ້ຳ */
+  qrFromCache?: boolean;
   error?: string;
 };
 
@@ -77,6 +79,8 @@ export function SubscriptionButton({
   const [payResult, setPayResult] = useState<CreateSubscriptionResponse | null>(null);
   /** ຂະນະຮ້ອງສ້າງ QR — ຄວບຄູ່ກັບ loading ຈາກ parent */
   const [generating, setGenerating] = useState(false);
+  /** ກັ້ນກົດຊ້ຳກ່ອນ React state ອັບເດດ (spam double-click) */
+  const subscribeInFlightRef = useRef(false);
 
   const list = useMemo(
     () => (plans.length > 0 ? plans : null),
@@ -94,11 +98,13 @@ export function SubscriptionButton({
   const selected = list?.find((p) => p.id === selectedPlanId) ?? list?.[0];
 
   const handleSubscribe = async () => {
+    if (subscribeInFlightRef.current) return;
     if (!userId) {
       toast.error("ບໍ່ພົບ user id");
       return;
     }
 
+    subscribeInFlightRef.current = true;
     setGenerating(true);
     onLoadingChange(true);
     try {
@@ -146,6 +152,8 @@ export function SubscriptionButton({
         toast.warning(
           "ບັນທຶກລໍຖ້າຊຳລະຊົ່ວຄາວບໍ່ສຳເລັດ — ສາມາດສະແກນ QR ຕາມປົກກະຕິ; ຖ້າຊຳລະແລ້ວບໍ່ອັບເດດ ກະລຸນາຕິດຕໍ່ແອດມິນ"
         );
+      } else if (result.qrFromCache) {
+        toast.message("ໃຊ້ QR ທີ່ສ້າງກ່ອນໜ້າ (ຫຼຸດການກົດຊ້ຳ)", { duration: 3500 });
       }
 
       setPayResult(result);
@@ -154,6 +162,7 @@ export function SubscriptionButton({
       console.error("SubscriptionButton fetch error:", error);
       toast.error("ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່");
     } finally {
+      subscribeInFlightRef.current = false;
       setGenerating(false);
       onLoadingChange(false);
     }

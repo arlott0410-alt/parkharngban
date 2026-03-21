@@ -11,6 +11,12 @@ import {
   getDurationDaysForPlan,
 } from "@/lib/subscription-plans";
 import { upsertPendingPhajayPayment } from "@/lib/subscription-pending";
+import {
+  buildStoredBcelPayload,
+  buildSubscriptionQrApiPayload,
+  computeQrCodeUrlFromPhajayResult,
+  tryGetCachedBcelForPlan,
+} from "@/lib/subscription-bcel-cache";
 
 export const runtime = "edge";
 
@@ -57,10 +63,56 @@ export async function POST(request: NextRequest) {
 
     const amount = getSubscriptionAmountLakForPlan(planId);
     const planMeta = SUBSCRIPTION_PLANS[planId];
+
+    const { data: pendingRow, error: pendingFetchError } = await supabase
+      .from("subscriptions")
+      .select("status, payment_ref, payment_details, updated_at")
+      .eq("user_id", numericUserId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pendingFetchError) {
+      console.error("renew-subscription pending row fetch error:", pendingFetchError);
+      return NextResponse.json({ error: "ລະບົບກວດສອບ subscription ຂັດຂ້ອງ" }, { status: 500 });
+    }
+
+    const cached = tryGetCachedBcelForPlan(
+      pendingRow?.status,
+      pendingRow?.payment_details,
+      planId,
+      pendingRow?.updated_at ?? null
+    );
+
+    if (cached) {
+      const payload = buildSubscriptionQrApiPayload({
+        qrCodeUrl: cached.qrCodeUrl,
+        deepLink: cached.deepLink,
+        transactionId: cached.transactionId,
+        amount: cached.amountLak || amount,
+        qr_image_url: null,
+        qr_data: null,
+        qrCode: null,
+        link: cached.deepLink,
+        pendingSaveFailed: false,
+        qrFromCache: true,
+      });
+
+      console.log("[renew-subscription] returning cached BCEL QR (cooldown)", {
+        userId: numericUserId,
+        planId,
+        transactionId: cached.transactionId,
+      });
+
+      return NextResponse.json(payload);
+    }
+
     const phajayResult = await createPhajaySubscriptionQr({
       userId,
       planId,
     });
+
+    const storedBcel = buildStoredBcelPayload(phajayResult, amount, nowIso);
 
     const { error: saveError } = await upsertPendingPhajayPayment(supabase, {
       userId: numericUserId,
@@ -72,31 +124,24 @@ export async function POST(request: NextRequest) {
         duration_days: getDurationDaysForPlan(planId),
         months_charged: planMeta.monthsCharged,
         months_covered: planMeta.monthsCovered,
+        bcel: storedBcel,
       },
     });
 
-    const qrCodeUrl =
-      phajayResult.qr_image_url?.trim() ||
-      (phajayResult.qrCode?.trim().startsWith("http")
-        ? phajayResult.qrCode.trim()
-        : "") ||
-      phajayResult.qrCode ||
-      "";
+    const qrCodeUrl = computeQrCodeUrlFromPhajayResult(phajayResult);
 
-    const payload = {
-      success: true as const,
+    const payload = buildSubscriptionQrApiPayload({
       qrCodeUrl,
       deepLink: phajayResult.link,
       transactionId: phajayResult.transactionId,
       amount,
       qr_image_url: phajayResult.qr_image_url,
       qr_data: phajayResult.qr_data,
-      transaction_id: phajayResult.transactionId,
-      link: phajayResult.link,
       qrCode: phajayResult.qrCode,
-      amount_lak: amount,
+      link: phajayResult.link,
       pendingSaveFailed: Boolean(saveError),
-    };
+      qrFromCache: false,
+    });
 
     if (saveError) {
       console.error("renew-subscription save pending error (still returning QR):", saveError);
