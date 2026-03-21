@@ -45,10 +45,36 @@ Phajay POST → /api/phajay/webhook  (status ປະມານ SUBSCRIPTION_SUCCES
 
 ---
 
+## Test vs Production (`PHAJAY_MODE`)
+
+| ຄ່າ | ຄວາມໝາຍ |
+|-----|---------|
+| `PHAJAY_MODE=test` | ໃຊ້ **Test / Sandbox keys** — ຊຳລະທົດລອງ (ຍອດ 1 ກີບໃນໂຄ້ດ) |
+| `PHAJAY_MODE=production` | ໃຊ້ **Production keys** — ຫຼັງ KYC; ຕ້ອງມີ webhook secret |
+
+ລຳດັບການເລືອກ API key (ເບິ່ງ `lib/phajay-env.ts`):
+
+- Test: `PHAJAY_SECRET_KEY_TEST` → ຫຼື `PHAJAY_SECRET_KEY`
+- Production: `PHAJAY_SECRET_KEY_PRODUCTION` → ຫຼື `PHAJAY_SECRET_KEY`
+
+Webhook HMAC (`x-phajay-signature`):
+
+- Test: `PHAJAY_WEBHOOK_SECRET_TEST` → ຫຼື `PHAJAY_WEBHOOK_SECRET`
+- Production: `PHAJAY_WEBHOOK_SECRET_PRODUCTION` → ຫຼື `PHAJAY_WEBHOOK_SECRET`
+
+ທົດສອບໃນ test ໂດຍບໍ່ມີ webhook secret (ບໍ່ແນະນຳ): ຕັ້ງ `PHAJAY_ALLOW_UNSIGNED_WEBHOOKS=true` **ສະເພາະຊົ່ວຄາວ**. Production ຕ້ອງມີ secret ຫຼືຈະໄດ້ HTTP 503.
+
+**ບໍ່ commit key ຈຣິງລົງ Git** — ໃສ່ໃນ Cloudflare / `.env.local` ຢ່າງດຽວ.
+
+---
+
 ## ສິ່ງທີ່ຕ້ອງຕັ້ງຄ່ານອກຈາກໂຄ້ດ
 
 1. **Environment** — ເບິ່ງ `.env.example` (ຫຼື Cloudflare Pages):
-   - `PHAJAY_SECRET_KEY`, `PHAJAY_API_URL`, `PHAJAY_WEBHOOK_SECRET`, `PHAJAY_MODE`, `PHAJAY_MERCHANT_ID` (ຖ້າຕ້ອງໃຊ້ກັບ payment-link)
+   - `PHAJAY_MODE`, `PHAJAY_SECRET_KEY_TEST`, `PHAJAY_SECRET_KEY_PRODUCTION`, `PHAJAY_SECRET_KEY` (fallback)
+   - `PHAJAY_WEBHOOK_SECRET_TEST`, `PHAJAY_WEBHOOK_SECRET_PRODUCTION`, `PHAJAY_WEBHOOK_SECRET`
+   - `PHAJAY_API_URL` ຫຼື `PHAJAY_API_URL_TEST` / `PHAJAY_API_URL_PRODUCTION` (ຖ້າ endpoint ຕ່າງກັນ)
+   - `PHAJAY_MERCHANT_ID` (ຖ້າຕ້ອງໃຊ້ກັບ payment-link)
    - **`APP_URL`** ຫຼື **`NEXT_PUBLIC_APP_URL`** = URL ຈຣິງຂອງແອັບ (ໃຊ້ສ້າງ URL webhook ທີ່ຖືກຕ້ອງ)
 
 2. **ໃນແຜງຄວບຄຸມ Phajay (merchant)** — ລົງທະບຽນ **Webhook URL** ໃຫ້ກົງກັບໂດເມນເຮົາ ຕົວຢ່າງ:
@@ -64,7 +90,8 @@ Phajay POST → /api/phajay/webhook  (status ປະມານ SUBSCRIPTION_SUCCES
 
 | ໄຟລ໌ | ໜ້າທີ່ |
 |------|--------|
-| `lib/phajay.ts` | ເອີ້ນ API Phajay, ກວດລາຍເຊັນ webhook, ຄິດລາຄາແຜນ |
+| `lib/phajay-env.ts` | ແຍກ Test/Production, ເລືອກ API key ແລະ webhook secret |
+| `lib/phajay.ts` | ເອີ້ນ API Phajay, ກວດລາຍເຊັນ webhook (HMAC, timing-safe), ຄິດລາຄາແຜນ |
 | `lib/subscription-plans.ts` | ນິຍາມແຜນ 1m / 6m / 12m ແລະ `duration_days` ຝັ່ງເຮົາ |
 | `app/api/phajay/create-subscription/route.ts` | ສ້າງ QR + ບັນທຶກ pending subscription |
 | `app/api/phajay/webhook/route.ts` | ຮັບຊຳລະສຳເລັດ → ເປີດສະມາຊິກຕາມ `duration_days` |

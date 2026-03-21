@@ -55,11 +55,17 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
 | `TELEGRAM_BOT_TOKEN` | From @BotFather |
 | `GEMINI_API_KEY` | Google AI Studio API key |
-| `PHAJAY_SECRET_KEY` | Phajay merchant secret (`secretKey` / Bearer ຕາມ endpoint) |
-| `PHAJAY_API_URL` | `https://payment-gateway.phajay.co/v1/api` (default ໃນໂຄ້ດ) |
-| `PHAJAY_WEBHOOK_SECRET` | ກວດລາຍເຊັນ webhook (`x-phajay-signature`) |
+| `PHAJAY_MODE` | **`test`** (default) ຫຼື **`production`** — ເລືອກຊຸດ key; ບໍ່ເດົາເອງຈາກຮູບແບບ key |
+| `PHAJAY_SECRET_KEY_TEST` | Test / Sandbox API key (generate-bcel-qr, payment-link) |
+| `PHAJAY_SECRET_KEY_PRODUCTION` | Production API key (ຫຼັງ KYC) |
+| `PHAJAY_SECRET_KEY` | Fallback ຖ້າບໍ່ແຍກ test/prod |
+| `PHAJAY_WEBHOOK_SECRET_TEST` | ຄວາມລັບກວດ `x-phajay-signature` (test) |
+| `PHAJAY_WEBHOOK_SECRET_PRODUCTION` | Webhook secret (production) |
+| `PHAJAY_WEBHOOK_SECRET` | Fallback ສຳລັບ webhook HMAC |
+| `PHAJAY_API_URL` | `https://payment-gateway.phajay.co/v1/api` (default) |
+| `PHAJAY_API_URL_TEST` / `PHAJAY_API_URL_PRODUCTION` | ຖ້າ Phajay ໃຫ້ endpoint ຄນລະ URL |
 | `PHAJAY_MERCHANT_ID` | ສຳລັບ payment-link (ຖ້າໃຊ້) |
-| `PHAJAY_MODE` | `test` ຫຼືວ່າງ — ໂໝດທົດລອງຊຳລະ 1 ກີບ |
+| `PHAJAY_ALLOW_UNSIGNED_WEBHOOKS` | `true` = ຍອມຮັບ webhook ບໍ່ມີ signature **ສະເພາະ test** (ບໍ່ແນະນຳ) |
 | `APP_URL` | URL ຈຣິງຂອງແອັບ (ໃຊ້ສ້າງ webhook URL ໃຫ້ກົງກັບ Phajay) |
 | `NEXT_PUBLIC_APP_URL` | Your Cloudflare Pages URL (fallback ຂອງ APP_URL) |
 | `ADMIN_TELEGRAM_ID` | Your personal Telegram user ID |
@@ -68,6 +74,10 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
 
 > ຫຼັງ deploy: ລົງທະບຽນ **Webhook URL** ໃນແຜງ Phajay ໃຫ້ຊີ້ມາ `https://<YOUR_DOMAIN>/api/phajay/webhook` (ເບິ່ງ [`docs/PHAJAY.md`](docs/PHAJAY.md)).
+
+**ທົດສອບມື້ນີ້ (Test):** ຕັ້ງ `PHAJAY_MODE=test`, ໃສ່ `PHAJAY_SECRET_KEY_TEST` + `PHAJAY_WEBHOOK_SECRET_TEST` ຈາກ Phajay dashboard, ກວດ `APP_URL` ໃຫ້ກົງກັບ URL ທີ່ລົງທະບຽນ webhook.
+
+**ຫຼັງ KYC (Production):** ປ່ຽນເປັນ `PHAJAY_MODE=production`, ໃສ່ `PHAJAY_SECRET_KEY_PRODUCTION` ແລະ `PHAJAY_WEBHOOK_SECRET_PRODUCTION`, ລົບ ຫຼືປິດ `PHAJAY_ALLOW_UNSIGNED_WEBHOOKS`. ບໍ່ commit key ຈຣິງລົງ Git.
 
 ### 4. After Deployment
 

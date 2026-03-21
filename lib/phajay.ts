@@ -1,12 +1,32 @@
 /**
  * Phajay — ຊຳລະເງິນກີບ (LAK) ຜ່ານເກດເວຍ; ອາຍຸສະມາຊິກໃນແອັບກຳນົດຝັ່ງເຮົາ (webhook + Supabase).
- * @see docs/PHAJAY.md — ກະແສການເຊື່ອມຕໍ່ ແລະ URL ທີ່ຕ້ອງລົງທະບຽນໃນ Phajay
+ *
+ * - ໂໝດ Test/Production: `PHAJAY_MODE` + keys ໃນ `lib/phajay-env.ts`
+ * @see docs/PHAJAY.md
  */
 import {
   type SubscriptionPlanId,
   SUBSCRIPTION_PLANS,
   getDurationDaysForPlan,
 } from "@/lib/subscription-plans";
+import {
+  getPhajayApiBaseUrl,
+  getPhajayApiSecretKey,
+  getPhajayMode,
+  getPhajayWebhookSecret,
+  isPhajayProductionMode,
+  isPhajayTestMode,
+  phajayLog,
+} from "@/lib/phajay-env";
+
+export {
+  getPhajayMode,
+  isPhajayProductionMode,
+  isPhajayTestMode,
+  phajayLog,
+  redactTransactionId,
+} from "@/lib/phajay-env";
+export type { PhajayRuntimeMode } from "@/lib/phajay-env";
 
 const textEncoder = new TextEncoder();
 
@@ -32,18 +52,10 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
   return toHex(new Uint8Array(signature));
 }
 
-const PHAJAY_API_URL = process.env.PHAJAY_API_URL ?? "https://payment-gateway.phajay.co/v1/api";
-const PHAJAY_SECRET_KEY = process.env.PHAJAY_SECRET_KEY ?? "";
-const PHAJAY_WEBHOOK_SECRET = process.env.PHAJAY_WEBHOOK_SECRET ?? "";
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
-const PHAJAY_MODE = process.env.PHAJAY_MODE ?? "";
 const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "30000", 10);
 const SUBSCRIPTION_DURATION_DAYS = parseInt(process.env.SUBSCRIPTION_DURATION_DAYS ?? "30", 10);
 const APP_URL = process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
-
-export function isPhajayTestMode(): boolean {
-  return PHAJAY_MODE.toLowerCase() === "test" || PHAJAY_SECRET_KEY.toLowerCase().includes("test");
-}
 
 export function getSubscriptionAmountLak(): number {
   if (isPhajayTestMode()) {
@@ -115,12 +127,19 @@ export async function createPhajaySubscriptionQr(params: {
   userId: string;
   planId?: SubscriptionPlanId;
 }): Promise<{ qrCode: string; link: string; transactionId: string }> {
-  if (!PHAJAY_SECRET_KEY) {
-    throw new Error("PHAJAY_SECRET_KEY is not set");
+  const secretKey = getPhajayApiSecretKey();
+  if (!secretKey) {
+    const mode = getPhajayMode();
+    throw new Error(
+      mode === "test"
+        ? "ຕັ້ງ PHAJAY_SECRET_KEY_TEST ຫຼື PHAJAY_SECRET_KEY (test)"
+        : "ຕັ້ງ PHAJAY_SECRET_KEY_PRODUCTION ຫຼື PHAJAY_SECRET_KEY"
+    );
   }
 
   const planId: SubscriptionPlanId = params.planId ?? "1m";
   const finalAmount = getSubscriptionAmountLakForPlan(planId);
+  const baseUrl = getPhajayApiBaseUrl();
 
   const subscriptionDate = toYYYYMMDD(new Date()); // make debit happen immediately (and avoid setup webhook "no response" note)
 
@@ -132,10 +151,16 @@ export async function createPhajaySubscriptionQr(params: {
     description: buildSubscriptionQrDescription(planId),
   };
 
-  const response = await fetch(`${PHAJAY_API_URL}/subscription/generate-bcel-qr`, {
+  phajayLog("info", "generate-bcel-qr request", {
+    endpoint: `${baseUrl}/subscription/generate-bcel-qr`,
+    planId,
+    maxAmount: finalAmount,
+  });
+
+  const response = await fetch(`${baseUrl}/subscription/generate-bcel-qr`, {
     method: "POST",
     headers: {
-      secretKey: PHAJAY_SECRET_KEY,
+      secretKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -143,7 +168,10 @@ export async function createPhajaySubscriptionQr(params: {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error("Phajay generate QR failed:", response.status, errorBody);
+    phajayLog("error", "generate-bcel-qr failed", {
+      status: response.status,
+      body: errorBody.slice(0, 500),
+    });
     throw new Error("ບໍ່ສາມາດສ້າງ QR ການຊຳລະໄດ້ ກະລຸນາລອງໃໝ່");
   }
 
@@ -172,13 +200,15 @@ export async function createPhajayPaymentLink(
   userId: string,
   amount: number
 ): Promise<{ payment_url: string; reference: string }> {
-  if (!PHAJAY_SECRET_KEY) {
-    throw new Error("PHAJAY_SECRET_KEY is not set");
+  const secretKey = getPhajayApiSecretKey();
+  if (!secretKey) {
+    throw new Error("Phajay API secret not configured (see PHAJAY_SECRET_KEY_TEST / PHAJAY_SECRET_KEY)");
   }
   if (!APP_URL) {
     throw new Error("APP_URL is not set");
   }
 
+  const baseUrl = getPhajayApiBaseUrl();
   const reference = `sub_${userId}_${Date.now()}`;
   const successUrl = `${APP_URL}/payment/success?ref=${encodeURIComponent(reference)}`;
   const cancelUrl = `${APP_URL}/payment/cancel`;
@@ -199,10 +229,10 @@ export async function createPhajayPaymentLink(
     payload.merchant_id = PHAJAY_MERCHANT_ID;
   }
 
-  const response = await fetch(`${PHAJAY_API_URL}/link/payment-link`, {
+  const response = await fetch(`${baseUrl}/link/payment-link`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${PHAJAY_SECRET_KEY}`,
+      Authorization: `Bearer ${secretKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -210,7 +240,7 @@ export async function createPhajayPaymentLink(
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error("Phajay create link failed:", response.status, errorBody);
+    phajayLog("error", "payment-link failed", { status: response.status, body: errorBody.slice(0, 500) });
     throw new Error("ບໍ່ສາມາດເຊື່ອມຕໍ່ Phajay ໄດ້ ກະລຸນາລອງໃໝ່");
   }
 
@@ -231,18 +261,60 @@ export async function createPhajayPaymentLink(
   };
 }
 
+function timingSafeEqualHex(a: string, b: string): boolean {
+  const aa = a.toLowerCase();
+  const bb = b.toLowerCase();
+  if (aa.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < aa.length; i++) {
+    diff |= aa.charCodeAt(i) ^ bb.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+export type PhajayWebhookVerifyResult =
+  | { ok: true }
+  | { ok: false; status: 401 | 503; reason: string };
+
+/**
+ * ກວດ HMAC ຂອງ raw body ກັບ x-phajay-signature (hex SHA-256).
+ * - Production: ຕ້ອງມີ PHAJAY_WEBHOOK_SECRET*
+ * - Test: ຕັ້ງ secret ຫຼື PHAJAY_ALLOW_UNSIGNED_WEBHOOKS=true (ທົດສອບເທົ່ານັ້ນ)
+ */
 export async function verifyPhajayWebhookSignature(
   rawBody: string,
   signature: string | null
-): Promise<boolean> {
-  if (!PHAJAY_WEBHOOK_SECRET) {
-    return true;
+): Promise<PhajayWebhookVerifyResult> {
+  const secret = getPhajayWebhookSecret();
+  const allowUnsigned =
+    getPhajayMode() === "test" &&
+    process.env.PHAJAY_ALLOW_UNSIGNED_WEBHOOKS === "true";
+
+  if (!secret) {
+    if (isPhajayProductionMode()) {
+      phajayLog("error", "webhook: missing webhook secret in production");
+      return { ok: false, status: 503, reason: "webhook_secret_not_configured" };
+    }
+    if (allowUnsigned) {
+      phajayLog("warn", "webhook: accepting unsigned (PHAJAY_ALLOW_UNSIGNED_WEBHOOKS=true, test only)");
+      return { ok: true };
+    }
+    phajayLog("error", "webhook: set PHAJAY_WEBHOOK_SECRET_TEST or PHAJAY_ALLOW_UNSIGNED_WEBHOOKS=true");
+    return { ok: false, status: 503, reason: "webhook_secret_not_configured" };
   }
-  // Some webhook types in Phajay may not send signature headers.
-  // To keep the subscription flow working, treat missing signature as "skip verify".
-  if (!signature) return true;
-  const expected = await hmacSha256Hex(PHAJAY_WEBHOOK_SECRET, rawBody);
-  return expected.toLowerCase() === signature.toLowerCase();
+
+  if (!signature || !signature.trim()) {
+    phajayLog("warn", "webhook: missing x-phajay-signature header");
+    return { ok: false, status: 401, reason: "missing_signature" };
+  }
+
+  const expected = await hmacSha256Hex(secret, rawBody);
+  if (!timingSafeEqualHex(expected, signature.trim())) {
+    phajayLog("warn", "webhook: signature mismatch");
+    return { ok: false, status: 401, reason: "invalid_signature" };
+  }
+
+  return { ok: true };
 }
 
 export function isSuccessfulPhajayStatus(status: string | undefined): boolean {
