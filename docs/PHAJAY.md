@@ -49,7 +49,7 @@ Phajay POST → /api/phajay/webhook  (status ປະມານ SUBSCRIPTION_SUCCES
 
 | ຄ່າ | ຄວາມໝາຍ |
 |-----|---------|
-| `PHAJAY_MODE=test` | ໃຊ້ **Test / Sandbox keys** — ຊຳລະທົດລອງ (ຍອດ 1 ກີບໃນໂຄ້ດ) |
+| `PHAJAY_MODE=test` | ໃຊ້ **Test / Sandbox keys** — ຍອດຕໍ່ເດືອນຈາກ **`SUBSCRIPTION_TEST_AMOUNT`** (default **500** ກີບ) |
 | `PHAJAY_MODE=production` | ໃຊ້ **Production keys** — ຫຼັງ KYC; ຕ້ອງມີ webhook secret |
 
 ລຳດັບການເລືອກ API key (ເບິ່ງ `lib/phajay-env.ts`):
@@ -70,20 +70,20 @@ Webhook HMAC (`x-phajay-signature`):
 
 ## ລາຄາສະມາຊິກ: Test vs Production
 
-ທັງສອງໂໝດໃຊ້ສູດດຽວກັນ: **`SUBSCRIPTION_PRICE_LAK` × ເດືອນທີ່ຈ່າຍ** (`getSubscriptionAmountLakForPlan`). ຕັ້ງ **500** ສຳລັບ sandbox, **30000** (ຫຼືຕາມທີ່ຕ້ອງການ) ສຳລັບ production.
+ທັງສອງໂໝດໃຊ້ສູດດຽວກັນ: **`ລາຄາຕໍ່ເດືອນ` × ເດືອນທີ່ຈ່າຍ** (`getSubscriptionAmountLakForPlan`). Test: **`SUBSCRIPTION_TEST_AMOUNT`** (default **500**); Production: **`SUBSCRIPTION_PRICE_LAK`** (default **50000** ກີບ/ເດືອນ).
 
 | `PHAJAY_MODE` | ຄຳອະທິບາຍ |
 |---------------|------------|
 | `test` | ຍັງໃຊ້ລາຄາຈາກ env (ບໍ່ບັງຄັບ 1 ກີບອີກຕໍ່ໄປ) — log ເຕືອນໃນ server |
 | `production` | ຄືກັນ — ຕັ້ງ `SUBSCRIPTION_PRICE_LAK` ໃຫ້ສູງພໍສຳລັບຊີວິດຈຣິງ |
 
-ຕົວຢ່າງ `SUBSCRIPTION_PRICE_LAK=30000`:
+ຕົວຢ່າງ `SUBSCRIPTION_PRICE_LAK=50000`:
 
 | ແຜນ | ເດືອນທີ່ຈ່າຍ | ຍອດ LAK |
 |-----|-------------|---------|
-| 1m | 1 | 30,000 |
-| 6m | 5 | 150,000 |
-| 12m | 10 | 300,000 |
+| 1m | 1 | 50,000 |
+| 6m | 5 | 250,000 |
+| 12m | 10 | 500,000 |
 
 ## BCEL generate-bcel-qr (ປັບປຸງ 2025)
 

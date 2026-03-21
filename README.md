@@ -1,7 +1,7 @@
 # ປ້າຂ້າງບ້ານ (Pah-Khaang-Baan)
 
 > AI-powered income/expense tracker for Lao people via Telegram Mini App.  
-> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ | ຄ່າບໍລິການ 30,000 ກີບ/ເດືອນ
+> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ | ຄ່າບໍລິການ 50,000 ກີບ/ເດືອນ (ປັບໄດ້ຜ່ານ `SUBSCRIPTION_PRICE_LAK`)
 
 ---
 
@@ -70,7 +70,8 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `NEXT_PUBLIC_APP_URL` | Your Cloudflare Pages URL (fallback ຂອງ APP_URL) |
 | `ADMIN_TELEGRAM_ID` | Your personal Telegram user ID |
 | `WEBHOOK_SECRET` | Random secret for webhook validation |
-| `SUBSCRIPTION_PRICE_LAK` | ລາຄາຕໍ່ເດືອນ (ກີບ) — ຕົວຢ່າງ `50000`; ແຜນ 6m = ×5, 12m = ×10 |
+| `SUBSCRIPTION_TEST_AMOUNT` | `500` — ລາຄາຕໍ່ເດືອນໃນໂໝດ `PHAJAY_MODE=test` (ທົດສອບ QR ຕ່ຳ) |
+| `SUBSCRIPTION_PRICE_LAK` | **`50000`** (default ໃນໂຄ້ດ) — ລາຄາຕໍ່ເດືອນ production (ກີບ); ແຜນ 6m = ×5, 12m = ×10 |
 | `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
 | `SUBSCRIPTION_QR_COOLDOWN_SECONDS` | `120` (default) — ຫຼັງສ້າງ QR ສຳເລັດ ຖ້າກົດຊ້ຳໃນ cooldown ຈະຄືນ QR ເກົ່າຈາກ DB (ຫຼຸດ spam / ຫຼາຍບິນ Phajay) |
 
@@ -122,7 +123,7 @@ CREATE TABLE subscriptions (
   started_at TIMESTAMPTZ,
   expiry_date TIMESTAMPTZ,
   payment_ref TEXT, -- Phajay transaction reference
-  amount_lak INTEGER DEFAULT 30000,
+  amount_lak INTEGER DEFAULT 50000,
   payment_details JSONB, -- plan, duration_days, months_* (ໃຊ້ກັບ webhook ອັບເດດອາຍຸ)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
