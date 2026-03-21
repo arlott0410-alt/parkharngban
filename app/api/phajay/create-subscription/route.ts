@@ -20,6 +20,7 @@ import {
 export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
+  const logTs = () => new Date().toISOString();
   try {
     const body = (await request.json()) as { user_id?: string; plan?: string };
     const userId = (body.user_id ?? "").trim();
@@ -35,6 +36,8 @@ export async function POST(request: NextRequest) {
     if (Number.isNaN(numericUserId)) {
       return NextResponse.json({ error: "user id ບໍ່ຖືກຕ້ອງ" }, { status: 400 });
     }
+
+    console.log(`[create-subscription] ${logTs()} request`, { userId: numericUserId, plan: planId });
 
     const nowIso = new Date().toISOString();
 
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
 
     const storedBcel = buildStoredBcelPayload(phajayResult, amount, nowIso);
 
+    /** ບັນທຶກ subscriptions: status=pending, payment_ref=transactionId, amount_lak — ລໍຖ້າ webhook ຫຼັງຊຳລະ */
     const { error: saveError } = await upsertPendingPhajayPayment(supabase, {
       userId: numericUserId,
       amountLak: amount,

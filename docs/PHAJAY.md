@@ -27,8 +27,8 @@
         ▼
 POST /api/phajay/create-subscription
         │  ──► Phajay: generate-bcel-qr (maxAmount = ຍອດຕາມແຜນ)
-        │  ──► ບັນທຶກ subscriptions: payment_ref = transactionId,
-        │                    payment_details = { duration_days, plan, ... }
+        │  ──► ບັນທຶກ subscriptions: status = pending, payment_ref = transactionId,
+        │                    payment_details = { plan, months_covered, duration_days, bcel, ... }
         ▼
 ລູກຄ້າສະແກນ / ຈ່າຍສຳເລັດ
         │
@@ -133,8 +133,10 @@ Webhook HMAC (`x-phajay-signature`):
 | `lib/phajay.ts` | ເອີ້ນ API Phajay, ກວດລາຍເຊັນ webhook (HMAC, timing-safe), ຄິດລາຄາແຜນ |
 | `lib/subscription-plans.ts` | ນິຍາມແຜນ 1m / 6m / 12m ແລະ `duration_days` ຝັ່ງເຮົາ |
 | `app/api/phajay/create-subscription/route.ts` | ສ້າງ QR + ບັນທຶກ pending subscription |
-| `app/api/phajay/webhook/route.ts` | ຮັບຊຳລະສຳເລັດ → ເປີດສະມາຊິກຕາມ `duration_days` |
-| `lib/phajay-webhook.ts` | ກວດຄວາມສຳເລັດ + ລວບລວມ transaction id ຈາກ payload |
+| `app/api/phajay/webhook/route.ts` | ຮັບຊຳລະສຳເລັດ → `active` + `expiry_date` ຕາມເດືອນຂອງແຜນ (calendar months) |
+| `lib/phajay-webhook.ts` | ກວດຄວາມສຳເລັດ (ລວມ message ທີ່ມີ SUCCESS) + ລວບລວມ transaction / subscription id |
+| `lib/subscription-expiry.ts` | ຄິດ `expiry_date` (ເລີ່ມຕົ້ນ ຫຼືຕໍ່ອາຍຸ recurring) |
+| `app/api/mini-app/subscription-status/route.ts` | ກວດສະຖານະ subscription ຈາກ Supabase (ຫຼັງຊຳລະ) |
 | `app/api/phajay/subscription-setup/route.ts` | ຮັບເຫດເຊື່ອມຕໍ່ subscription (ຖ້າມີ) |
 
 ---

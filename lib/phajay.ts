@@ -53,10 +53,13 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
-/** Production: ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — ຄ່າເລີ່ມຕົ້ນກົງກັບ README / .env.example (50000) */
+/**
+ * Production: ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — default **50000** (ປັບໄດ້ຜ່ານ SUBSCRIPTION_PRICE_LAK).
+ */
 const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "50000", 10);
 /**
- * Test/sandbox: ຍອດຕໍ່ເດືອນສຳລັບທັງ UI ແລະ maxAmount ສົ່ງ Phajay (ບໍ່ເກີນ limit ທົດລອງ)
+ * Test/sandbox (PHAJAY_MODE=test): ຍອດຕໍ່ເດືອນ — default 500 ກີບເພື່ອບໍ່ເກີນ limit ທົດລອງ Phajay
+ * Production ບໍ່ໃຊ້ຄ່ານີ້ — ໃຊ້ SUBSCRIPTION_PRICE_LAK ແທນ
  * @see SUBSCRIPTION_TEST_AMOUNT ໃນ .env.example
  */
 const SUBSCRIPTION_TEST_AMOUNT = parseInt(process.env.SUBSCRIPTION_TEST_AMOUNT ?? "500", 10);

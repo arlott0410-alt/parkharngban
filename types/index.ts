@@ -3,7 +3,12 @@
 // ======================================
 
 export type TransactionType = "income" | "expense";
-export type SubscriptionStatus = "active" | "inactive" | "expired" | "pending";
+export type SubscriptionStatus =
+  | "active"
+  | "inactive"
+  | "expired"
+  | "pending"
+  | "pending_active";
 
 /** ສຳລັບ UI + API profile — ລາຄາຄິດໄລ່ຝັ່ງເຊີເວີ */
 export type SubscriptionPlanOption = {

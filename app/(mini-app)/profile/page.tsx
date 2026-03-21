@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Crown,
@@ -54,22 +54,23 @@ export default function ProfilePage() {
   const initDataRaw =
     typeof window !== "undefined" ? window.Telegram?.WebApp?.initData ?? "" : "";
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch("/api/mini-app/profile", {
-          headers: { "x-telegram-init-data": initDataRaw },
-        });
-        if (res.ok) {
-          const d = await res.json() as ProfileData;
-          setData(d);
-        }
-      } finally {
-        setLoading(false);
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/mini-app/profile", {
+        headers: { "x-telegram-init-data": initDataRaw },
+      });
+      if (res.ok) {
+        const d = (await res.json()) as ProfileData;
+        setData(d);
       }
-    };
-    void fetchProfile();
+    } finally {
+      setLoading(false);
+    }
   }, [initDataRaw]);
+
+  useEffect(() => {
+    void fetchProfile();
+  }, [fetchProfile]);
 
   const handleExport = async () => {
     setExportLoading(true);
@@ -240,6 +241,8 @@ export default function ProfilePage() {
               loading={renewLoading}
               onLoadingChange={setRenewLoading}
               plans={data?.subscription_plans}
+              telegramInitData={initDataRaw}
+              onSubscriptionUpdated={fetchProfile}
             />
           </motion.div>
 

@@ -1,7 +1,20 @@
 # ປ້າຂ້າງບ້ານ (Pah-Khaang-Baan)
 
 > AI-powered income/expense tracker for Lao people via Telegram Mini App.  
-> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ | ຄ່າບໍລິການ 50,000 ກີບ/ເດືອນ (ປັບໄດ້ຜ່ານ `SUBSCRIPTION_PRICE_LAK`)
+> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ | ຄ່າບໍລິການຕາມ `SUBSCRIPTION_PRICE_LAK` (default production **50,000** ກີບ/ເດືອນ; test **500** ກີບ/ເດືອນ)
+
+---
+
+## Phajay — ການຊຳລະສະມາຊິກ (ອັດຕະໂນມັດ)
+
+1. ຜູ້ໃຊ້ເລືອກແຜນ → `POST /api/phajay/create-subscription` → Phajay ສ້າງ **BCEL QR**
+2. ລະບົບບັນທຶກ `subscriptions`: **`status=pending`**, **`payment_ref` = transactionId**, `payment_details` (ແຜນ, ເດືອນ, bcel)
+3. ລູກຄ້າຊຳລະຜ່ານ BCEL / ທະນາຄານ
+4. Phajay ສົ່ງ **webhook** ມາ `https://<APP_URL>/api/phajay/webhook` ພ້ອມ **`x-phajay-signature`** (HMAC-SHA256 ກັບ **`PHAJAY_WEBHOOK_SECRET_*`** ທີ່ຕັ້ງໃນແຜງ Phajay)
+5. ລະບົບອັບເດດ **`status=active`**, **`expiry_date`** ຕາມຈຳນວນເດືອນຂອງແຜນ (ຄິດໄລ່ຝັ່ງເຮົາ)
+6. Mini App ກວດໄດ້ໜ້າ Profile ຫຼື `GET /api/mini-app/subscription-status` (ປຸ່ມ “ກວດສອບສະຖານະ”)
+
+ຖ້າຊຳລະແລ້ວແຕ່ຍັງບໍ່ active: ກວດ **`APP_URL`**, webhook URL ໃນ Phajay, ແລະວ່າ **`PHAJAY_WEBHOOK_SECRET`** ກົງກັບທີ່ຕັ້ງໃນ dashboard (ເບິ່ງ [`docs/PHAJAY.md`](docs/PHAJAY.md)).
 
 ---
 
@@ -21,7 +34,7 @@
 ### Admin — ຈັດການສະມາຊິກລູກຄ້າ
 - ໜ້າ **`/admin/users`** ແລະ **`/admin/subscriptions`**: ປຸ່ມ **ເພີ່ມສະມາຊິກ / ຕໍ່ອາຍຸ** (ໃສ່ຈຳນວນວັນ) ແລະ **ຍົກເລີກ** — ເອີ້ນ `POST /api/admin/subscriptions/manage` (`action: grant | revoke`, ກວດ cookie `admin_session`)
 - **grant**: ຖ້າຍັງມີອາຍຸຢູ່ ຈະຕໍ່ຈາກວັນໝົດເກົ່າ; ຖ້າບໍ່ມີແຖວ subscription ຈະສ້າງໃໝ່ ຕາມ `SUBSCRIPTION_PRICE_LAK` ໃນ env (ຕົວຢ່າງ 50000 ກີບ)
-- **revoke ຫຼັງລູກຄ້າຊຳລະແລ້ວ:** ລະບົບຕັ້ງ `status=expired` + ວັນໝົດໃນອະດີດ — ການສ້າງ QR (`/api/phajay/create-subscription`) ກວດແຕ່ວ່າມີແຖວ **`active` + ວັນໝົດຍັງບໍ່ມາຮອດ** ຫຼືບໍ່ — **ຫຼັງຍົກເລີກຈຶ່ງຍັງສາມາດສ້າງ QR ຊຳລະໃໝ່ໄດ້** (ບໍ່ຕິດສະຖານະ “ມີ subscription active” ອີກ). Cooldown QR cache ໃຊ້ແຕ່ `status=inactive` — ບໍ່ກັນຫຼັງ revoke.
+- **revoke ຫຼັງລູກຄ້າຊຳລະແລ້ວ:** ລະບົບຕັ້ງ `status=expired` + ວັນໝົດໃນອະດີດ — ການສ້າງ QR (`/api/phajay/create-subscription`) ກວດແຕ່ວ່າມີແຖວ **`active` + ວັນໝົດຍັງບໍ່ມາຮອດ** ຫຼືບໍ່ — **ຫຼັງຍົກເລີກຈຶ່ງຍັງສາມາດສ້າງ QR ຊຳລະໃໝ່ໄດ້** (ບໍ່ຕິດສະຖານະ “ມີ subscription active” ອີກ). Cooldown QR cache ໃຊ້ແຕ່ `status=pending` ຫຼື `inactive` — ບໍ່ກັນຫຼັງ revoke.
 
 ---
 
@@ -80,7 +93,7 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `ADMIN_TELEGRAM_ID` | Your personal Telegram user ID |
 | `WEBHOOK_SECRET` | Random secret for webhook validation |
 | `SUBSCRIPTION_TEST_AMOUNT` | `500` — ລາຄາຕໍ່ເດືອນໃນໂໝດ `PHAJAY_MODE=test` (ທົດສອບ QR ຕ່ຳ) |
-| `SUBSCRIPTION_PRICE_LAK` | **`50000`** (default ໃນໂຄ້ດ) — ລາຄາຕໍ່ເດືອນ production (ກີບ); ແຜນ 6m = ×5, 12m = ×10 |
+| `SUBSCRIPTION_PRICE_LAK` | **`50000`** (default ໃນໂຄ້ດ production) — ລາຄາຕໍ່ເດືອນ (ກີບ); ແຜນ 6m = ×5, 12m = ×10 |
 | `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
 | `SUBSCRIPTION_QR_COOLDOWN_SECONDS` | `120` (default) — ຫຼັງສ້າງ QR ສຳເລັດ ຖ້າກົດຊ້ຳໃນ cooldown ຈະຄືນ QR ເກົ່າຈາກ DB (ຫຼຸດ spam / ຫຼາຍບິນ Phajay) |
 

@@ -113,7 +113,17 @@ export default async function AdminSubscriptionsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isActive ? "active" : sub.status === "inactive" ? "inactive" : "expired"}>
+                      <Badge
+                        variant={
+                          isActive
+                            ? "active"
+                            : sub.status === "pending" || sub.status === "inactive"
+                              ? "inactive"
+                              : sub.status === "pending_active"
+                                ? "secondary"
+                                : "expired"
+                        }
+                      >
                         {isActive ? `Active ${days > 0 ? `(${days}d)` : ""}` : sub.status}
                       </Badge>
                     </TableCell>

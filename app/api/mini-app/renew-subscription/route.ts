@@ -21,6 +21,7 @@ import {
 export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
+  const logTs = () => new Date().toISOString();
   try {
     const initDataRaw = request.headers.get("x-telegram-init-data") ?? "";
     const { valid, data: initData } = await validateTelegramInitData(initDataRaw);
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
     } catch {
       // no body
     }
+
+    console.log(`[renew-subscription] ${logTs()} request`, { userId: numericUserId, plan: planId });
 
     const { data: activeSubscription, error: activeCheckError } = await supabase
       .from("subscriptions")

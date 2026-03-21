@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * ບັນທຶກ / ອັບເດດແຖວລໍຖ້າຊຳລະ Phajay (inactive + payment_ref).
+ * ບັນທຶກ / ອັບເດດແຖວລໍຖ້າຊຳລະ Phajay (status = pending, payment_ref = transactionId ຈາກ QR).
  *
  * ຖ້າຕາຕະລາງມີ UNIQUE(user_id) ການ `insert` ຄັ້ງທີສອງຈະລົ້ມ — ໃຊ້ອັບເດດແຖວເດີມແທນ.
  */
@@ -31,7 +31,8 @@ export async function upsertPendingPhajayPayment(
   const row = {
     amount_lak: params.amountLak,
     payment_ref: params.paymentRef,
-    status: "inactive" as const,
+    /** pending = ລໍຖ້າຊຳລະຫຼັງສ້າງ QR (ກົງກັບ flow ທີ່ຜູ້ໃຊ້ຂໍ; ຂໍ້ມູນເກົ່າອາດຍັງເປັນ inactive) */
+    status: "pending" as const,
     payment_details: params.paymentDetails,
     updated_at: params.nowIso,
   };

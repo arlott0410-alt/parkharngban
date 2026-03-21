@@ -122,7 +122,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: number;
-          status: "active" | "inactive" | "expired" | "pending";
+          status: "active" | "inactive" | "expired" | "pending" | "pending_active";
           started_at: string | null;
           expiry_date: string | null;
           payment_ref: string | null;
@@ -133,7 +133,7 @@ export type Database = {
         };
         Insert: {
           user_id: number;
-          status?: "active" | "inactive" | "expired" | "pending";
+          status?: "active" | "inactive" | "expired" | "pending" | "pending_active";
           started_at?: string | null;
           expiry_date?: string | null;
           payment_ref?: string | null;
@@ -143,7 +143,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
-          status?: "active" | "inactive" | "expired" | "pending";
+          status?: "active" | "inactive" | "expired" | "pending" | "pending_active";
           started_at?: string | null;
           expiry_date?: string | null;
           payment_ref?: string | null;

@@ -42,7 +42,8 @@ export function tryGetCachedBcelForPlan(
   planId: SubscriptionPlanId,
   rowUpdatedAt: string | null | undefined
 ): StoredBcelPayload | null {
-  if (rowStatus !== "inactive") return null;
+  /** ລໍຖ້າຊຳລະ: pending (ໃໝ່) ຫຼື inactive (ຂໍ້ມູນເກົ່າ) */
+  if (rowStatus !== "inactive" && rowStatus !== "pending") return null;
   if (!rowUpdatedAt) return null;
   const cooldown = getSubscriptionQrCooldownSeconds();
   if (!isWithinCooldown(rowUpdatedAt, cooldown)) return null;

@@ -15,6 +15,9 @@ import { toast } from "sonner";
 import { formatLAK, cn } from "@/lib/utils";
 import type { SubscriptionPlanOption } from "@/types";
 
+/** QR ໃຊ້ໄດ້ປະມານ 10 ນາທີ — ສະແດງ countdown ໃຫ້ຜູ້ໃຊ້ສະແກນທັນ */
+const QR_VALID_SECONDS = 600;
+
 type SubscriptionButtonProps = {
   userId?: number;
   isActive: boolean;
@@ -22,6 +25,10 @@ type SubscriptionButtonProps = {
   loading: boolean;
   onLoadingChange: (loading: boolean) => void;
   plans?: SubscriptionPlanOption[];
+  /** initData ສຳລັບຫົວຂໍ້ຫຼັກກວດສະຖານະ — ຖ້າບໍ່ສົ່ງຈະໃຊ້ Telegram.WebApp.initData */
+  telegramInitData?: string;
+  /** ຫຼັງກວດສະຖານະສຳເລັດ — ໂຫຼດ profile ໃໝ່ */
+  onSubscriptionUpdated?: () => void | Promise<void>;
 };
 
 /** ຄຳຕອບຈາກ POST /api/phajay/create-subscription */
@@ -66,6 +73,12 @@ function hasPaymentSurface(r: CreateSubscriptionResponse): boolean {
   return Boolean(qrImageSrc(r) || deepLinkHref(r));
 }
 
+function formatCountdown(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export function SubscriptionButton({
   userId,
   isActive,
@@ -73,6 +86,8 @@ export function SubscriptionButton({
   loading,
   onLoadingChange,
   plans = [],
+  telegramInitData = "",
+  onSubscriptionUpdated,
 }: SubscriptionButtonProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanOption["id"]>("1m");
   const [qrOpen, setQrOpen] = useState(false);
@@ -81,6 +96,8 @@ export function SubscriptionButton({
   const [generating, setGenerating] = useState(false);
   /** ກັ້ນກົດຊ້ຳກ່ອນ React state ອັບເດດ (spam double-click) */
   const subscribeInFlightRef = useRef(false);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState(QR_VALID_SECONDS);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   const list = useMemo(
     () => (plans.length > 0 ? plans : null),
@@ -96,6 +113,67 @@ export function SubscriptionButton({
   }, [list]);
 
   const selected = list?.find((p) => p.id === selectedPlanId) ?? list?.[0];
+
+  /** Countdown 10 ນາທີ ຫຼັງເປີດ QR */
+  useEffect(() => {
+    if (!qrOpen || !payResult) return;
+    setQrSecondsLeft(QR_VALID_SECONDS);
+    const id = window.setInterval(() => {
+      setQrSecondsLeft((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [qrOpen, payResult]);
+
+  const getInitData = () => {
+    if (telegramInitData.trim()) return telegramInitData;
+    if (typeof window !== "undefined" && window.Telegram?.WebApp?.initData) {
+      return window.Telegram.WebApp.initData;
+    }
+    return "";
+  };
+
+  const handleCheckStatus = async () => {
+    const initData = getInitData();
+    if (!initData) {
+      toast.error("ບໍ່ພົບ Telegram init data");
+      return;
+    }
+    setCheckingStatus(true);
+    try {
+      const res = await fetch("/api/mini-app/subscription-status", {
+        headers: { "x-telegram-init-data": initData },
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        subscription?: { status?: string; expiry_date?: string | null } | null;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error ?? "ກວດສອບບໍ່ສຳເລັດ");
+        return;
+      }
+      const st = data.subscription?.status ?? "";
+      if (st === "active") {
+        toast.success("ສະມາຊິກກຳລັງໃຊ້ງານ — ສຳເລັດ!");
+        await onSubscriptionUpdated?.();
+        setQrOpen(false);
+      } else {
+        toast.message(`ສະຖານະປັດຈຸບັນ: ${st || "ລໍຖ້າ"} — ຖ້າຊຳລະແລ້ວລໍຖ້າສັນຍານວິນາທີ`);
+        await onSubscriptionUpdated?.();
+      }
+    } catch (e) {
+      console.error("[SubscriptionButton] check status", e);
+      toast.error("ເຊື່ອມຕໍ່ບໍ່ສຳເລັດ");
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   const handleSubscribe = async () => {
     if (subscribeInFlightRef.current) return;
@@ -242,6 +320,17 @@ export function SubscriptionButton({
             </DialogDescription>
           </DialogHeader>
 
+          {payResult && (
+            <div className="rounded-lg border border-amber-200/80 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 text-center">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                QR ใช้ได้ 10 นาที กรุณาสแกนด่วน
+              </p>
+              <p className="text-lg font-bold number-font text-amber-800 dark:text-amber-200 mt-1">
+                {formatCountdown(qrSecondsLeft)}
+              </p>
+            </div>
+          )}
+
           {imgSrc && (
             <div className="flex flex-col items-center gap-2">
               <p className="text-sm text-center text-muted-foreground">
@@ -259,6 +348,17 @@ export function SubscriptionButton({
           )}
 
           <DialogFooter className="flex-col gap-2 sm:flex-col">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full gap-2"
+              loading={checkingStatus}
+              disabled={checkingStatus}
+              onClick={() => void handleCheckStatus()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              ກວດສອບສະຖານະ
+            </Button>
             {bcelLink ? (
               <Button
                 type="button"
