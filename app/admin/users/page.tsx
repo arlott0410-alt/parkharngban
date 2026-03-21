@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, isSubscriptionActive, daysUntilExpiry } from "@/lib/utils";
+import { SubscriptionManageButtons } from "@/components/admin/SubscriptionManageButtons";
 
 export const dynamic = "force-dynamic";
 export const runtime = "edge";
@@ -62,12 +63,13 @@ export default async function AdminUsersPage() {
               <TableHead>ສະຖານະ</TableHead>
               <TableHead>ໝົດອາຍຸ</TableHead>
               <TableHead>ສົມທົບ</TableHead>
+              <TableHead className="text-right w-[200px]">ຈັດການສະມາຊິກ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   ຍັງບໍ່ມີຜູ້ໃຊ້
                 </TableCell>
               </TableRow>
@@ -113,6 +115,13 @@ export default async function AdminUsersPage() {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {formatDateTime(user.created_at)}
+                    </TableCell>
+                    <TableCell className="text-right align-top">
+                      <SubscriptionManageButtons
+                        userId={user.id}
+                        hasSubscriptionRow={Boolean(sub)}
+                        expiryDate={sub?.expiry_date}
+                      />
                     </TableCell>
                   </TableRow>
                 );

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime, isSubscriptionActive, daysUntilExpiry, formatLAK } from "@/lib/utils";
+import { SubscriptionManageButtons } from "@/components/admin/SubscriptionManageButtons";
 
 export const dynamic = "force-dynamic";
 export const runtime = "edge";
@@ -52,7 +53,9 @@ export default async function AdminSubscriptionsPage() {
     <div className="p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">ສະມາຊິກ</h1>
-        <p className="text-sm text-muted-foreground mt-1">ຈັດການການສະໝັກສະມາຊິກ</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          ຈັດການການສະໝັກສະມາຊິກ — ເພີ່ມ/ຕໍ່ອາຍຸ ຫຼື ຍົກເລີກໄດ້ຕໍ່ແຖວ
+        </p>
       </div>
 
       {/* Summary cards */}
@@ -81,12 +84,13 @@ export default async function AdminSubscriptionsPage() {
               <TableHead>ໝົດອາຍຸ</TableHead>
               <TableHead>ຄ່າສະມາຊິກ</TableHead>
               <TableHead>ອ້າງອີງການຊຳລະ</TableHead>
+              <TableHead className="text-right w-[200px]">ຈັດການ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {subscriptions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                   ຍັງບໍ່ມີຂໍ້ມູນ
                 </TableCell>
               </TableRow>
@@ -124,6 +128,13 @@ export default async function AdminSubscriptionsPage() {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground font-mono">
                       {sub.payment_ref ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right align-top">
+                      <SubscriptionManageButtons
+                        userId={sub.user_id}
+                        hasSubscriptionRow
+                        expiryDate={sub.expiry_date}
+                      />
                     </TableCell>
                   </TableRow>
                 );
