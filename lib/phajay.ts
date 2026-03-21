@@ -1,3 +1,7 @@
+/**
+ * Phajay — ຊຳລະເງິນກີບ (LAK) ຜ່ານເກດເວຍ; ອາຍຸສະມາຊິກໃນແອັບກຳນົດຝັ່ງເຮົາ (webhook + Supabase).
+ * @see docs/PHAJAY.md — ກະແສການເຊື່ອມຕໍ່ ແລະ URL ທີ່ຕ້ອງລົງທະບຽນໃນ Phajay
+ */
 import {
   type SubscriptionPlanId,
   SUBSCRIPTION_PLANS,
@@ -268,4 +272,24 @@ export function calculateNewExpiry(currentExpiry?: string | null): Date {
 
 export function getSubscriptionPriceDisplay(): string {
   return new Intl.NumberFormat("lo-LA").format(SUBSCRIPTION_PRICE_LAK) + " ກີບ/ເດືອນ";
+}
+
+// ======================================
+// URLs ສຳລັບລົງທະບຽນໃນແຜງ Phajay (webhook)
+// ======================================
+
+function getAppBaseUrl(): string {
+  return (APP_URL || "").replace(/\/$/, "");
+}
+
+/** URL ທີ່ຕ້ອງໃຫ້ Phajay ສົ່ງເຫດຊຳລະ subscription ສຳເລັດ — ຖ້າບໍ່ມີ APP_URL ຈະໄດ້ null */
+export function getPhajayWebhookUrl(): string | null {
+  const base = getAppBaseUrl();
+  return base ? `${base}/api/phajay/webhook` : null;
+}
+
+/** URL ສຳລັບເຫດ SUBSCRIPTION_CONNECTED (ຖ້າ Phajay ແຍກ endpoint) */
+export function getPhajaySubscriptionSetupWebhookUrl(): string | null {
+  const base = getAppBaseUrl();
+  return base ? `${base}/api/phajay/subscription-setup` : null;
 }

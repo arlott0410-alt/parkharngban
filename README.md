@@ -11,7 +11,7 @@
 - **Database**: Supabase (PostgreSQL + Row Level Security)
 - **AI**: Google Gemini API (Lao language NLP)
 - **Bot Platform**: Telegram Bot API + Mini App
-- **Payment**: Phajay (LAK payment gateway)
+- **Payment**: Phajay (LAK payment gateway) — ລາຍລະອຽດການເຊື່ອມຕໍ່: [`docs/PHAJAY.md`](docs/PHAJAY.md)
 - **Deployment**: Cloudflare Pages (GitHub integration)
 
 ---
@@ -55,14 +55,19 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
 | `TELEGRAM_BOT_TOKEN` | From @BotFather |
 | `GEMINI_API_KEY` | Google AI Studio API key |
-| `PHAJAY_SECRET_KEY` | Phajay merchant secret |
-| `PHAJAY_API_URL` | `https://api.phajay.co` |
-| `PHAJAY_MERCHANT_ID` | Your Phajay merchant ID |
-| `NEXT_PUBLIC_APP_URL` | Your Cloudflare Pages URL |
+| `PHAJAY_SECRET_KEY` | Phajay merchant secret (`secretKey` / Bearer ຕາມ endpoint) |
+| `PHAJAY_API_URL` | `https://payment-gateway.phajay.co/v1/api` (default ໃນໂຄ້ດ) |
+| `PHAJAY_WEBHOOK_SECRET` | ກວດລາຍເຊັນ webhook (`x-phajay-signature`) |
+| `PHAJAY_MERCHANT_ID` | ສຳລັບ payment-link (ຖ້າໃຊ້) |
+| `PHAJAY_MODE` | `test` ຫຼືວ່າງ — ໂໝດທົດລອງຊຳລະ 1 ກີບ |
+| `APP_URL` | URL ຈຣິງຂອງແອັບ (ໃຊ້ສ້າງ webhook URL ໃຫ້ກົງກັບ Phajay) |
+| `NEXT_PUBLIC_APP_URL` | Your Cloudflare Pages URL (fallback ຂອງ APP_URL) |
 | `ADMIN_TELEGRAM_ID` | Your personal Telegram user ID |
 | `WEBHOOK_SECRET` | Random secret for webhook validation |
 | `SUBSCRIPTION_PRICE_LAK` | `30000` |
-| `SUBSCRIPTION_DURATION_DAYS` | `30` |
+| `SUBSCRIPTION_DURATION_DAYS` | `30` (ຮອບຊຳລະຕາມພາລາມິເຕີ Phajay; ອາຍຸໃຊ້ງານໃນແອັບຄິດຈາກ `payment_details`) |
+
+> ຫຼັງ deploy: ລົງທະບຽນ **Webhook URL** ໃນແຜງ Phajay ໃຫ້ຊີ້ມາ `https://<YOUR_DOMAIN>/api/phajay/webhook` (ເບິ່ງ [`docs/PHAJAY.md`](docs/PHAJAY.md)).
 
 ### 4. After Deployment
 
