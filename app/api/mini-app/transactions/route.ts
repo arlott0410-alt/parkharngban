@@ -34,7 +34,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "DB error" }, { status: 500 });
   }
 
-  return NextResponse.json({ transactions: data ?? [] });
+  /** ແປງ `categories` (join Supabase) ເປັນ `category` ໃຫ້ກົງກັບ UI */
+  const transactions = (data ?? []).map((row: Record<string, unknown>) => {
+    const cats = row.categories;
+    const cat = Array.isArray(cats) ? cats[0] : cats;
+    const rest = { ...row };
+    delete rest.categories;
+    return { ...rest, category: cat };
+  });
+
+  return NextResponse.json({ transactions });
 }
 
 export async function POST(request: NextRequest) {

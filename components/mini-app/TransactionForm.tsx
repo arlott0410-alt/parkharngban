@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Calendar, Tag } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,11 +16,19 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { Category, GeminiParseResponse, ParsedTransaction, TransactionType } from "@/types";
+import type {
+  Category,
+  GeminiParseResponse,
+  ParsedTransaction,
+  Transaction,
+  TransactionType,
+} from "@/types";
 import { matchCategoryByHint } from "@/lib/category-matcher";
 
 interface TransactionFormProps {
   initialType?: TransactionType;
+  /** ໂໝດແກ້ໄຂ — ສົ່ງມາຈາກລາຍການໜ້າຫຼັກ */
+  initialTransaction?: Transaction | null;
   categories: Category[];
   onSubmit: (data: {
     type: TransactionType;
@@ -31,28 +39,59 @@ interface TransactionFormProps {
     raw_text?: string | null;
     ai_parsed?: boolean;
   }) => Promise<void>;
+  /** ລຶບທຸລະກຳ (ສະເພາະໂໝດແກ້ໄຂ) */
+  onDelete?: () => Promise<void>;
   onCancel?: () => void;
   enableAiParse?: boolean;
 }
 
 export function TransactionForm({
   initialType = "expense",
+  initialTransaction = null,
   categories,
   onSubmit,
+  onDelete,
   onCancel,
   enableAiParse = true,
 }: TransactionFormProps) {
+  const isEdit = Boolean(initialTransaction?.id);
   const [type, setType] = useState<TransactionType>(initialType);
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [aiEnabled, setAiEnabled] = useState<boolean>(enableAiParse);
   const [rawText, setRawText] = useState<string>("");
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiParsed, setAiParsed] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialTransaction) {
+      setType(initialTransaction.type);
+      setAmount(
+        new Intl.NumberFormat("lo-LA").format(Math.max(0, Math.floor(initialTransaction.amount)))
+      );
+      setCategoryId(initialTransaction.category_id ?? "");
+      setDescription(initialTransaction.description ?? "");
+      setDate(
+        String(initialTransaction.transaction_date).slice(0, 10) ||
+          new Date().toISOString().split("T")[0]
+      );
+      setAiParsed(false);
+      setRawText("");
+      return;
+    }
+    setType(initialType);
+    setAmount("");
+    setCategoryId("");
+    setDescription("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setRawText("");
+    setAiParsed(false);
+  }, [initialTransaction, initialType]);
 
   const filteredCategories = categories.filter(
     (c) => c.type === type || c.type === "both"
@@ -155,9 +194,11 @@ export function TransactionForm({
     }
   };
 
+  const aiParseEnabled = enableAiParse && !isEdit;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {enableAiParse && (
+      {aiParseEnabled && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
             <Label>ໃຊ້ AI parse (ຄື Telegram)</Label>
@@ -304,10 +345,31 @@ export function TransactionForm({
               type === "income" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
             )}
           >
-            {loading ? "ກຳລັງບັນທຶກ..." : "ບັນທຶກ"}
+            {loading ? "ກຳລັງບັນທຶກ..." : isEdit ? "ບັນທຶກການປ່ຽນແປງ" : "ບັນທຶກ"}
           </Button>
         </motion.div>
       </div>
+
+      {isEdit && onDelete ? (
+        <Button
+          type="button"
+          variant="destructive"
+          className="w-full h-11 gap-2"
+          loading={deleting}
+          onClick={async () => {
+            if (!window.confirm("ລຶບທຸລະກຳນີ້? ບໍ່ສາມາດກູ້ຄືນໄດ້")) return;
+            setDeleting(true);
+            try {
+              await onDelete();
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+          ລຶບທຸລະກຳ
+        </Button>
+      ) : null}
     </form>
   );
 }

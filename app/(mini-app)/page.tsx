@@ -23,6 +23,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<"income" | "expense">("expense");
+  /** ກົດຈາກລາຍການເພື່ອແກ້ໄຂ/ລຶບ */
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [userName, setUserName] = useState<string>("");
 
   const initDataRaw =
@@ -67,7 +69,7 @@ export default function HomePage() {
     void fetchData();
   }, [fetchData]);
 
-  const handleAddTransaction = async (data: {
+  const handleSaveTransaction = async (data: {
     type: "income" | "expense";
     amount: number;
     category_id: string;
@@ -76,6 +78,27 @@ export default function HomePage() {
     raw_text?: string | null;
     ai_parsed?: boolean;
   }) => {
+    if (editingTransaction) {
+      const res = await fetch(`/api/mini-app/transactions/${editingTransaction.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-telegram-init-data": initDataRaw,
+        },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        toast.success("ອັບເດດສຳເລັດ! ✅");
+        setDialogOpen(false);
+        setEditingTransaction(null);
+        void fetchData();
+      } else {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        toast.error(err.error ?? "ອັບເດດບໍ່ສຳເລັດ");
+      }
+      return;
+    }
+
     const res = await fetch("/api/mini-app/transactions", {
       method: "POST",
       headers: {
@@ -96,6 +119,22 @@ export default function HomePage() {
       } else {
         toast.error(err.error ?? "ບັນທຶກບໍ່ສຳເລັດ");
       }
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!editingTransaction) return;
+    const res = await fetch(`/api/mini-app/transactions/${editingTransaction.id}`, {
+      method: "DELETE",
+      headers: { "x-telegram-init-data": initDataRaw },
+    });
+    if (res.ok) {
+      toast.success("ລຶບສຳເລັດ");
+      setDialogOpen(false);
+      setEditingTransaction(null);
+      void fetchData();
+    } else {
+      toast.error("ລຶບບໍ່ສຳເລັດ");
     }
   };
 
@@ -129,7 +168,10 @@ export default function HomePage() {
       {/* Recent Transactions */}
       <div className="px-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">ລາຍການລ່າສຸດ</h2>
+          <div>
+            <h2 className="text-sm font-semibold">ລາຍການລ່າສຸດ</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5">ແຕະລາຍການເພື່ອແກ້ໄຂ ຫຼື ລຶບ</p>
+          </div>
           <span className="text-xs text-muted-foreground">
             {now.toLocaleDateString("lo-LA", { month: "short", year: "numeric" })}
           </span>
@@ -157,12 +199,18 @@ export default function HomePage() {
           <div className="space-y-2">
             <AnimatePresence>
               {transactions.map((tx, index) => (
-                <motion.div
+                <motion.button
+                  type="button"
                   key={tx.id}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.04 }}
-                  className="flex items-center justify-between rounded-xl bg-card border border-border p-3.5"
+                  className="flex w-full items-center justify-between rounded-xl bg-card border border-border p-3.5 text-left active:scale-[0.99] transition-transform"
+                  onClick={() => {
+                    setEditingTransaction(tx);
+                    setDialogType(tx.type);
+                    setDialogOpen(true);
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -199,7 +247,7 @@ export default function HomePage() {
                       <p className="text-xs text-muted-foreground/60">AI</p>
                     )}
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
             </AnimatePresence>
           </div>
@@ -209,28 +257,46 @@ export default function HomePage() {
       {/* Floating Action Button */}
       <FloatingActionButton
         onAddIncome={() => {
+          setEditingTransaction(null);
           setDialogType("income");
           setDialogOpen(true);
         }}
         onAddExpense={() => {
+          setEditingTransaction(null);
           setDialogType("expense");
           setDialogOpen(true);
         }}
       />
 
       {/* Add Transaction Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditingTransaction(null);
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {dialogType === "income" ? "➕ ເພີ່ມລາຍຮັບ" : "➖ ເພີ່ມລາຍຈ່າຍ"}
+              {editingTransaction
+                ? "ແກ້ໄຂທຸລະກຳ"
+                : dialogType === "income"
+                  ? "➕ ເພີ່ມລາຍຮັບ"
+                  : "➖ ເພີ່ມລາຍຈ່າຍ"}
             </DialogTitle>
           </DialogHeader>
           <TransactionForm
+            key={editingTransaction?.id ?? `new-${dialogType}`}
             initialType={dialogType}
+            initialTransaction={editingTransaction}
             categories={categories}
-            onSubmit={handleAddTransaction}
-            onCancel={() => setDialogOpen(false)}
+            onSubmit={handleSaveTransaction}
+            onDelete={editingTransaction ? handleDeleteTransaction : undefined}
+            onCancel={() => {
+              setDialogOpen(false);
+              setEditingTransaction(null);
+            }}
             enableAiParse
           />
         </DialogContent>

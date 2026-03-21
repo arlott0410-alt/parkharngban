@@ -14,6 +14,10 @@
 - **Payment**: Phajay (LAK payment gateway) — ລາຍລະອຽດການເຊື່ອມຕໍ່: [`docs/PHAJAY.md`](docs/PHAJAY.md)
 - **Deployment**: Cloudflare Pages (GitHub integration)
 
+### Mini App — ຜູ້ໃຊ້
+- **ໜ້າຫຼັກ**: ແຕະລາຍການເພື່ອ **ແກ້ໄຂ** ຫຼື **ລຶບ** (API: `PATCH`/`DELETE` `/api/mini-app/transactions/[id]`)
+- **ລາຍງານ**: ສະຫຼຸບລາຍເດືອນ, ແຜນວຽນ **ລາຍຮັບ ແລະ ລາຍຈ່າຍຕາມໝວດ**, ແລະກຣາບເປຽບທຽບລາຍເດືອນໃນປີ
+
 ---
 
 ## Deployment Steps
