@@ -120,10 +120,14 @@ CREATE TABLE subscriptions (
   expiry_date TIMESTAMPTZ,
   payment_ref TEXT, -- Phajay transaction reference
   amount_lak INTEGER DEFAULT 30000,
+  payment_details JSONB, -- plan, duration_days, months_* (ໃຊ້ກັບ webhook ອັບເດດອາຍຸ)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id)
 );
+
+-- ຖ້າຕາຕະລາງເກົ່າບໍ່ມີຄອລຳນີ້ — ຮັນໃນ Supabase SQL Editor ກ່ອນໃຊ້ສ້າງ QR:
+-- ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS payment_details JSONB;
 
 -- Categories table
 CREATE TABLE categories (
