@@ -264,13 +264,13 @@ export default function ProfilePage() {
               </div>
               <div className="rounded-xl bg-muted/50 p-3 text-center">
                 <p className="text-base font-bold text-emerald-500 number-font">
-                  {formatLAK(data?.stats?.total_income ?? 0, true)}
+                  {formatLAK(data?.stats?.total_income ?? 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">ລາຍຮັບລວມ</p>
               </div>
               <div className="rounded-xl bg-muted/50 p-3 text-center">
                 <p className="text-base font-bold text-red-500 number-font">
-                  {formatLAK(data?.stats?.total_expense ?? 0, true)}
+                  {formatLAK(data?.stats?.total_expense ?? 0)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">ລາຍຈ່າຍລວມ</p>
               </div>

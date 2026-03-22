@@ -142,7 +142,7 @@ export default function ReportsPage() {
             >
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">ລາຍຮັບ</p>
               <p className="text-sm font-bold text-emerald-500 mt-0.5 number-font">
-                {formatLAK(summary?.total_income ?? 0, true)}
+                {formatLAK(summary?.total_income ?? 0)}
               </p>
             </motion.div>
             <motion.div
@@ -153,7 +153,7 @@ export default function ReportsPage() {
             >
               <p className="text-xs text-red-600 dark:text-red-400 font-medium">ລາຍຈ່າຍ</p>
               <p className="text-sm font-bold text-red-500 mt-0.5 number-font">
-                {formatLAK(summary?.total_expense ?? 0, true)}
+                {formatLAK(summary?.total_expense ?? 0)}
               </p>
             </motion.div>
             <motion.div
@@ -164,7 +164,7 @@ export default function ReportsPage() {
             >
               <p className="text-xs text-muted-foreground font-medium">ຄົງເຫຼືອ</p>
               <p className={`text-sm font-bold mt-0.5 number-font ${(summary?.balance ?? 0) >= 0 ? "text-primary" : "text-red-500"}`}>
-                {formatLAK(Math.abs(summary?.balance ?? 0), true)}
+                {formatLAK(Math.abs(summary?.balance ?? 0))}
               </p>
             </motion.div>
           </>
@@ -219,7 +219,7 @@ export default function ReportsPage() {
                               borderRadius: "8px",
                               fontSize: "11px",
                             }}
-                            formatter={(value: number) => [formatLAK(value, true), ""]}
+                            formatter={(value: number) => [formatLAK(value), ""]}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -248,7 +248,7 @@ export default function ReportsPage() {
                               </div>
                             </div>
                             <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 number-font">
-                              {formatLAK(cat.amount, true)}
+                              {formatLAK(cat.amount)}
                             </p>
                           </motion.div>
                         ))}
@@ -283,7 +283,7 @@ export default function ReportsPage() {
                               borderRadius: "8px",
                               fontSize: "11px",
                             }}
-                            formatter={(value: number) => [formatLAK(value, true), ""]}
+                            formatter={(value: number) => [formatLAK(value), ""]}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -312,7 +312,7 @@ export default function ReportsPage() {
                               </div>
                             </div>
                             <p className="text-sm font-bold text-red-500 number-font">
-                              {formatLAK(cat.amount, true)}
+                              {formatLAK(cat.amount)}
                             </p>
                           </motion.div>
                         ))}
@@ -350,7 +350,7 @@ export default function ReportsPage() {
                         fontSize: "11px",
                       }}
                       formatter={(value: number, name: string) => [
-                        formatLAK(value, true),
+                        formatLAK(value),
                         name === "income" ? "ລາຍຮັບ" : "ລາຍຈ່າຍ",
                       ]}
                     />

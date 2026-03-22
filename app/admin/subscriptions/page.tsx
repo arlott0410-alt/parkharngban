@@ -70,7 +70,7 @@ export default async function AdminSubscriptionsPage() {
         </div>
         <div className="rounded-xl border bg-card p-5">
           <p className="text-xs text-muted-foreground">ລາຍຮັບ Active</p>
-          <p className="text-2xl font-bold mt-1">{formatLAK(totalRevenueLAK, true)}</p>
+          <p className="text-2xl font-bold mt-1">{formatLAK(totalRevenueLAK)}</p>
         </div>
       </div>
 

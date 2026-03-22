@@ -59,11 +59,11 @@ export default async function AdminTransactionsPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-xl border bg-card p-5">
           <p className="text-xs text-muted-foreground">ລາຍຮັບລວມ</p>
-          <p className="text-xl font-bold text-emerald-500 mt-1">{formatLAK(totalIncome, true)}</p>
+          <p className="text-xl font-bold text-emerald-500 mt-1">{formatLAK(totalIncome)}</p>
         </div>
         <div className="rounded-xl border bg-card p-5">
           <p className="text-xs text-muted-foreground">ລາຍຈ່າຍລວມ</p>
-          <p className="text-xl font-bold text-red-500 mt-1">{formatLAK(totalExpense, true)}</p>
+          <p className="text-xl font-bold text-red-500 mt-1">{formatLAK(totalExpense)}</p>
         </div>
         <div className="rounded-xl border bg-card p-5">
           <p className="text-xs text-muted-foreground">ຈຳນວນ (AI parse)</p>
@@ -128,7 +128,7 @@ export default async function AdminTransactionsPage() {
                     </TableCell>
                     <TableCell className={`text-right font-semibold number-font ${t.type === "income" ? "text-emerald-500" : "text-red-500"}`}>
                       {t.type === "income" ? "+" : "−"}
-                      {formatLAK(t.amount, true)}
+                      {formatLAK(t.amount)}
                     </TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">
                       {t.description ?? t.raw_text ?? "—"}

@@ -10,21 +10,18 @@ export function cn(...inputs: ClassValue[]) {
 // Currency Formatting — Lao Kip (LAK)
 // ======================================
 
-export function formatLAK(amount: number, compact = false): string {
-  if (compact) {
-    if (amount >= 1_000_000) {
-      return `${(amount / 1_000_000).toFixed(1)}M ກີບ`;
-    }
-    if (amount >= 1_000) {
-      return `${(amount / 1_000).toFixed(0)}K ກີບ`;
-    }
-  }
+/**
+ * ສະແດງເງິນກີບເປັນຕົວເລກເຕັມ (ປັດເປັນຈຳນວນເຕັມ) — ບໍ່ໃຊ້ໂໝດຍໍ 50K/5K ເພື່ອບໍ່ສັບສົນ
+ * @param _legacyCompact ignored — ຄົງ signature ເກົ່າ (formatLAK(x, true)) ໃຫ້ບໍ່ເບີກ
+ */
+export function formatLAK(amount: number, _legacyCompact?: boolean): string {
+  const n = Number.isFinite(Number(amount)) ? Math.round(Number(amount)) : 0;
   return new Intl.NumberFormat("lo-LA", {
     style: "currency",
     currency: "LAK",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(n);
 }
 
 export function formatNumber(num: number): string {

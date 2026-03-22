@@ -150,12 +150,12 @@ export default function BudgetPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-xs text-muted-foreground">ງົບທັງໝົດ</p>
-              <p className="text-xl font-bold">{formatLAK(totalBudget, true)}</p>
+              <p className="text-xl font-bold">{formatLAK(totalBudget)}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-muted-foreground">ໃຊ້ໄປ</p>
               <p className={`text-xl font-bold ${totalSpent / totalBudget >= 0.9 ? "text-red-500" : "text-foreground"}`}>
-                {formatLAK(totalSpent, true)}
+                {formatLAK(totalSpent)}
               </p>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function BudgetPage() {
                         {budget.category?.name_lao ?? budget.category?.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {formatLAK(budget.spent ?? 0, true)} / {formatLAK(budget.amount, true)}
+                        {formatLAK(budget.spent ?? 0)} / {formatLAK(budget.amount)}
                       </p>
                     </div>
                   </div>

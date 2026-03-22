@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase";
 import { KpiCard } from "@/components/admin/KpiCard";
 import { RevenueChart, SubscriptionsChart } from "@/components/admin/Charts";
 import type { DashboardStats, MonthlyRevenueData } from "@/types";
+import { formatLAK } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 export const runtime = "edge";
@@ -118,8 +119,8 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="rounded-xl border bg-card p-6">
           <p className="text-sm text-muted-foreground">ລາຍຮັບເດືອນນີ້</p>
-          <p className="text-3xl font-bold mt-2">
-            {new Intl.NumberFormat("lo-LA", { notation: "compact" }).format(stats.revenue_this_month)}
+          <p className="text-3xl font-bold mt-2 number-font">
+            {formatLAK(stats.revenue_this_month)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">ກີບ</p>
         </div>

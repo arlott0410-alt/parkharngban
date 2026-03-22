@@ -241,7 +241,7 @@ export default function HomePage() {
                       }`}
                     >
                       {tx.type === "income" ? "+" : "−"}
-                      {formatLAK(tx.amount, true)}
+                      {formatLAK(tx.amount)}
                     </p>
                     {tx.ai_parsed && (
                       <p className="text-xs text-muted-foreground/60">AI</p>

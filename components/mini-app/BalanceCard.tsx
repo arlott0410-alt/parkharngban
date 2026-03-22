@@ -74,7 +74,7 @@ export function BalanceCard({ summary, userName }: BalanceCardProps) {
               <p className="text-xs text-white/70 font-medium">ລາຍຮັບ</p>
             </div>
             <p className="text-base font-bold number-font">
-              {hidden ? "•••••" : formatLAK(summary.total_income, true)}
+              {hidden ? "•••••" : formatLAK(summary.total_income)}
             </p>
           </div>
 
@@ -86,7 +86,7 @@ export function BalanceCard({ summary, userName }: BalanceCardProps) {
               <p className="text-xs text-white/70 font-medium">ລາຍຈ່າຍ</p>
             </div>
             <p className="text-base font-bold number-font">
-              {hidden ? "•••••" : formatLAK(summary.total_expense, true)}
+              {hidden ? "•••••" : formatLAK(summary.total_expense)}
             </p>
           </div>
         </div>
