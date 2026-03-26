@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { Flower2, Shield } from "lucide-react";
+import { getAdminSessionCookieName, validateAdminSessionToken } from "@/lib/admin-auth";
 
 export const runtime = "edge";
 
@@ -11,10 +12,10 @@ export default async function AdminLoginPage({
 }) {
   const params = await searchParams;
   const cookieStore = await cookies();
-  const session = cookieStore.get("admin_session")?.value;
-  const adminId = process.env.ADMIN_TELEGRAM_ID;
+  const session = cookieStore.get(getAdminSessionCookieName())?.value;
+  const isAdmin = await validateAdminSessionToken(session);
 
-  if (session && session === adminId) {
+  if (isAdmin) {
     redirect("/admin");
   }
 

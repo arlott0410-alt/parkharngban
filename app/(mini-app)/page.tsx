@@ -75,8 +75,6 @@ export default function HomePage() {
     category_id: string;
     description: string;
     transaction_date: string;
-    raw_text?: string | null;
-    ai_parsed?: boolean;
   }) => {
     if (editingTransaction) {
       const res = await fetch(`/api/mini-app/transactions/${editingTransaction.id}`, {
@@ -243,9 +241,6 @@ export default function HomePage() {
                       {tx.type === "income" ? "+" : "−"}
                       {formatLAK(tx.amount)}
                     </p>
-                    {tx.ai_parsed && (
-                      <p className="text-xs text-muted-foreground/60">AI</p>
-                    )}
                   </div>
                 </motion.button>
               ))}
@@ -297,7 +292,6 @@ export default function HomePage() {
               setDialogOpen(false);
               setEditingTransaction(null);
             }}
-            enableAiParse
           />
         </DialogContent>
       </Dialog>

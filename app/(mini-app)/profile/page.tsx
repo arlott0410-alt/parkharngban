@@ -108,7 +108,7 @@ export default function ProfilePage() {
   const days = data?.subscription ? daysUntilExpiry(data.subscription.expiry_date) : 0;
 
   const monthlyLak =
-    data?.subscription_plans?.find((p) => p.id === "1m")?.amount_lak ?? 50000;
+    data?.subscription_plans?.find((p) => p.id === "1m")?.amount_lak ?? 42000;
 
   return (
     <div className="min-h-screen bg-background">

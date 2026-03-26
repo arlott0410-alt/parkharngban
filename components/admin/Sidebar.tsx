@@ -9,7 +9,6 @@ import {
   Users,
   CreditCard,
   Tag,
-  Bot,
   Receipt,
   ChevronLeft,
   ChevronRight,
@@ -24,7 +23,6 @@ const navItems = [
   { href: "/admin/users", label: "ผู้ใช้", labelLao: "ຜູ້ໃຊ້", icon: Users },
   { href: "/admin/subscriptions", label: "ซับสคริปชัน", labelLao: "ສະມາຊິກ", icon: CreditCard },
   { href: "/admin/categories", label: "หมวดหมู่", labelLao: "ໝວດໝູ່", icon: Tag },
-  { href: "/admin/ai-settings", label: "AI Settings", labelLao: "ຕັ້ງຄ່າ AI", icon: Bot },
   { href: "/admin/transactions", label: "ธุรกรรม", labelLao: "ທຸລະກຳ", icon: Receipt },
 ];
 

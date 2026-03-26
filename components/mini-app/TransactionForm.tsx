@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Calendar, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -15,15 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import type {
   Category,
-  GeminiParseResponse,
-  ParsedTransaction,
   Transaction,
   TransactionType,
 } from "@/types";
-import { matchCategoryByHint } from "@/lib/category-matcher";
 
 interface TransactionFormProps {
   initialType?: TransactionType;
@@ -36,13 +31,10 @@ interface TransactionFormProps {
     category_id: string;
     description: string;
     transaction_date: string;
-    raw_text?: string | null;
-    ai_parsed?: boolean;
   }) => Promise<void>;
   /** ລຶບທຸລະກຳ (ສະເພາະໂໝດແກ້ໄຂ) */
   onDelete?: () => Promise<void>;
   onCancel?: () => void;
-  enableAiParse?: boolean;
 }
 
 export function TransactionForm({
@@ -52,7 +44,6 @@ export function TransactionForm({
   onSubmit,
   onDelete,
   onCancel,
-  enableAiParse = true,
 }: TransactionFormProps) {
   const isEdit = Boolean(initialTransaction?.id);
   const [type, setType] = useState<TransactionType>(initialType);
@@ -62,11 +53,6 @@ export function TransactionForm({
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  const [aiEnabled, setAiEnabled] = useState<boolean>(enableAiParse);
-  const [rawText, setRawText] = useState<string>("");
-  const [aiLoading, setAiLoading] = useState<boolean>(false);
-  const [aiParsed, setAiParsed] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialTransaction) {
@@ -80,8 +66,6 @@ export function TransactionForm({
         String(initialTransaction.transaction_date).slice(0, 10) ||
           new Date().toISOString().split("T")[0]
       );
-      setAiParsed(false);
-      setRawText("");
       return;
     }
     setType(initialType);
@@ -89,8 +73,6 @@ export function TransactionForm({
     setCategoryId("");
     setDescription("");
     setDate(new Date().toISOString().split("T")[0]);
-    setRawText("");
-    setAiParsed(false);
   }, [initialTransaction, initialType]);
 
   const filteredCategories = categories.filter(
@@ -119,52 +101,6 @@ export function TransactionForm({
     return Number.isFinite(n) ? n : 0;
   };
 
-  const handleAiParse = async () => {
-    if (!rawText.trim()) {
-      toast.error("ກະລຸນາໃສ່ຂໍ້ຄວາມກ່ອນ");
-      return;
-    }
-
-    setAiLoading(true);
-    setAiParsed(false);
-    try {
-      const res = await fetch("/api/gemini/parse", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: rawText }),
-      });
-
-      const data = (await res.json()) as GeminiParseResponse;
-      const parsed: ParsedTransaction | undefined = data.transaction;
-
-      if (!data.success || !parsed) {
-        toast.error(data.error ?? "AI parse ບໍ່ສຳເລັດ");
-        return;
-      }
-
-      setType(parsed.type);
-      setAmount(new Intl.NumberFormat("lo-LA").format(parsed.amount));
-      setDescription(parsed.description);
-      setDate(new Date().toISOString().split("T")[0]); // make mini-app match Telegram behavior (today)
-
-      const matchedCategoryId = matchCategoryByHint(parsed.category_hint, categories);
-      if (!matchedCategoryId) {
-        toast.error("AI ບໍ່ພົບໝວດກຳກັບຂໍ້ຄວາມ — ກະລຸນາເລືອກໝວດເອງ");
-        setCategoryId("");
-        return;
-      }
-
-      setCategoryId(matchedCategoryId);
-      setAiParsed(true);
-      toast.success("ດຶງຂໍ້ມູນຈາກ AI ສຳເລັດ");
-    } catch (error) {
-      console.error("handleAiParse error:", error);
-      toast.error("AI parse ບໍ່ສຳເລັດ ກະລຸນາລອງໃໝ່");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !categoryId) return;
@@ -177,8 +113,6 @@ export function TransactionForm({
         category_id: categoryId,
         description,
         transaction_date: date,
-        raw_text: aiEnabled && aiParsed ? rawText : null,
-        ai_parsed: aiEnabled && aiParsed,
       });
     } finally {
       setLoading(false);
@@ -194,43 +128,8 @@ export function TransactionForm({
     }
   };
 
-  const aiParseEnabled = enableAiParse && !isEdit;
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {aiParseEnabled && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <Label>ໃຊ້ AI parse (ຄື Telegram)</Label>
-            <Button
-              type="button"
-              variant={aiEnabled ? "default" : "outline"}
-              className="h-9 px-3"
-              onClick={() => {
-                setAiEnabled((v) => !v);
-                setAiParsed(false);
-              }}
-            >
-              {aiEnabled ? "ເປີດ" : "ປິດ"}
-            </Button>
-          </div>
-
-          {aiEnabled && (
-            <div className="space-y-2">
-              <Textarea
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                rows={3}
-                placeholder="ປະຈຳສົ່ງຂໍ້ຄວາມແບບ Telegram (ເຊັ່ນ: ໃຫ້ຈ່າຍ 50,000 ກີບ)"
-              />
-              <Button type="button" onClick={handleAiParse} loading={aiLoading} className="w-full">
-                ດຶງຂໍ້ມູນຈາກ AI
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Type Toggle */}
       <div className="grid grid-cols-2 gap-2">
         <button

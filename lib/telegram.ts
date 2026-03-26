@@ -95,7 +95,7 @@ export async function validateTelegramInitData(initDataRaw: string): Promise<{
 
 export function validateWebhookSecret(secretHeader: string | null): boolean {
   const expectedSecret = process.env.WEBHOOK_SECRET;
-  if (!expectedSecret) return true; // Skip validation if not configured
+  if (!expectedSecret) return false;
   return secretHeader === expectedSecret;
 }
 

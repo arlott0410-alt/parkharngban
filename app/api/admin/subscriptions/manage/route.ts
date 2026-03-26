@@ -21,7 +21,7 @@ function computeGrantExpiry(currentExpiryIso: string | null | undefined, duratio
  * - action=revoke: ຍົກເລີກ (ຕັ້ງໝົດອາຍຸໃນອະດີດ)
  */
 export async function POST(request: NextRequest) {
-  if (!isAdminRequest(request)) {
+  if (!(await isAdminRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
   const nowIso = new Date().toISOString();
-  const amountLak = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "50000", 10);
+  const amountLak = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "42000", 10);
 
   const { data: userRow, error: userErr } = await supabase
     .from("users")

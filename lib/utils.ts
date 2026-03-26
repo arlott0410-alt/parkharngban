@@ -124,6 +124,19 @@ export function transactionsToCSV(
     note?: string;
   }>
 ): string {
+  const escapeCsvCell = (value: string): string => {
+    const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const protectFormula =
+      normalized.startsWith("=") ||
+      normalized.startsWith("+") ||
+      normalized.startsWith("-") ||
+      normalized.startsWith("@")
+        ? `'${normalized}`
+        : normalized;
+    const escaped = protectFormula.replace(/"/g, "\"\"");
+    return `"${escaped}"`;
+  };
+
   const headers = ["ວັນທີ", "ປະເພດ", "ຈຳນວນ (ກີບ)", "ໝວດໝູ່", "ລາຍລະອຽດ", "ໝາຍເຫດ"];
   const rows = transactions.map((t) => [
     t.transaction_date,
@@ -133,7 +146,9 @@ export function transactionsToCSV(
     t.description ?? "",
     t.note ?? "",
   ]);
-  return [headers, ...rows].map((row) => row.join(",")).join("\n");
+  return [headers, ...rows]
+    .map((row) => row.map((cell) => escapeCsvCell(String(cell ?? ""))).join(","))
+    .join("\n");
 }
 
 // ======================================

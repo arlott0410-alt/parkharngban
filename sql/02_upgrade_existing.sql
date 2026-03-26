@@ -10,7 +10,7 @@ ALTER TABLE subscriptions
 
 -- ປັບ default ລາຄາຕໍ່ເດືອນ (ຖ້າຕ້ອງການໃຫ້ກົງ env production — ປ່ຽນເລກໄດ້)
 ALTER TABLE subscriptions
-  ALTER COLUMN amount_lak SET DEFAULT 50000;
+  ALTER COLUMN amount_lak SET DEFAULT 42000;
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

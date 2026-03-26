@@ -54,9 +54,9 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 
 const PHAJAY_MERCHANT_ID = process.env.PHAJAY_MERCHANT_ID ?? "";
 /**
- * Production: ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — default **50000** (ປັບໄດ້ຜ່ານ SUBSCRIPTION_PRICE_LAK).
+ * Production: ລາຄາຕໍ່ 1 ເດືອນ (ກີບ) — default **42000** (~USD 2, ปรับได้ผ่าน SUBSCRIPTION_PRICE_LAK).
  */
-const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "50000", 10);
+const SUBSCRIPTION_PRICE_LAK = parseInt(process.env.SUBSCRIPTION_PRICE_LAK ?? "42000", 10);
 /**
  * Test/sandbox (PHAJAY_MODE=test): ຍອດຕໍ່ເດືອນ — default 500 ກີບເພື່ອບໍ່ເກີນ limit ທົດລອງ Phajay
  * Production ບໍ່ໃຊ້ຄ່ານີ້ — ໃຊ້ SUBSCRIPTION_PRICE_LAK ແທນ
@@ -368,7 +368,7 @@ export async function createPhajayPaymentLink(
   const successUrl = `${APP_URL}/payment/success?ref=${encodeURIComponent(reference)}`;
   const cancelUrl = `${APP_URL}/payment/cancel`;
   const webhookUrl = `${APP_URL}/api/phajay/webhook`;
-  /** test: ຍອດຈາກ SUBSCRIPTION_TEST_AMOUNT (default 500) — production: SUBSCRIPTION_PRICE_LAK (default 50000) */
+  /** test: ຍອດຈາກ SUBSCRIPTION_TEST_AMOUNT (default 500) — production: SUBSCRIPTION_PRICE_LAK (default 42000) */
   const finalAmount = isPhajayTestMode() ? getSubscriptionPriceLak() : amount;
 
   const payload: Record<string, unknown> = {

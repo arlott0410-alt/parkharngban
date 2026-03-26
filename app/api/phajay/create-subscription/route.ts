@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { validateTelegramInitData } from "@/lib/telegram";
+import { checkRateLimit, getRequestIp } from "@/lib/rate-limit";
 import {
   createPhajaySubscriptionQr,
   getSubscriptionAmountLakForPlan,
@@ -22,12 +24,24 @@ export const runtime = "edge";
 export async function POST(request: NextRequest) {
   const logTs = () => new Date().toISOString();
   try {
+    const initDataRaw = request.headers.get("x-telegram-init-data") ?? "";
+    const { valid, data: initData } = await validateTelegramInitData(initDataRaw);
+    if (!valid || !initData?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ip = getRequestIp(request);
+    const limiter = checkRateLimit(`create-subscription:${initData.user.id}:${ip}`, 8, 60 * 1000);
+    if (!limiter.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = (await request.json()) as { user_id?: string; plan?: string };
-    const userId = (body.user_id ?? "").trim();
+    const userId = String(initData.user.id);
     const planId = parseSubscriptionPlanId(body.plan);
 
-    if (!userId) {
-      return NextResponse.json({ error: "ບໍ່ພົບ user id" }, { status: 400 });
+    if ((body.user_id ?? "").toString().trim() && (body.user_id ?? "").toString().trim() !== userId) {
+      return NextResponse.json({ error: "Forbidden user mismatch" }, { status: 403 });
     }
 
     const supabase = createAdminClient();

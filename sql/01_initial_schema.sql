@@ -31,7 +31,7 @@ CREATE TABLE subscriptions (
   started_at TIMESTAMPTZ,
   expiry_date TIMESTAMPTZ,
   payment_ref TEXT,
-  amount_lak INTEGER DEFAULT 50000,
+  amount_lak INTEGER DEFAULT 42000,
   payment_details JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

@@ -1,7 +1,7 @@
 # ປ້າຂ້າງບ້ານ (Pah-Khaang-Baan)
 
-> AI-powered income/expense tracker for Lao people via Telegram Mini App.  
-> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍດ້ວຍ AI ພາສາລາວ | ຄ່າບໍລິການຕາມ `SUBSCRIPTION_PRICE_LAK` (default production **50,000** ກີບ/ເດືອນ; test **500** ກີບ/ເດືອນ)
+> Mini App-first income/expense tracker for Lao people on Telegram.  
+> ຕິດຕາມລາຍຮັບ-ລາຍຈ່າຍຜ່ານ Mini App | ຄ່າບໍລິການຕາມ `SUBSCRIPTION_PRICE_LAK` (default production **50,000** ກີບ/ເດືອນ; test **500** ກີບ/ເດືອນ)
 
 ---
 
@@ -22,8 +22,7 @@
 
 - **Frontend**: Next.js 15 App Router + TypeScript + Tailwind CSS + shadcn/ui
 - **Database**: Supabase (PostgreSQL + Row Level Security)
-- **AI**: Google Gemini API (Lao language NLP)
-- **Bot Platform**: Telegram Bot API + Mini App
+- **Platform**: Telegram Mini App
 - **Payment**: Phajay (LAK payment gateway) — ລາຍລະອຽດການເຊື່ອມຕໍ່: [`docs/PHAJAY.md`](docs/PHAJAY.md)
 - **Deployment**: Cloudflare Pages (GitHub integration)
 
@@ -76,7 +75,6 @@ Go to **Pages** → your project → **Settings** → **Environment variables** 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
 | `TELEGRAM_BOT_TOKEN` | From @BotFather |
-| `GEMINI_API_KEY` | Google AI Studio API key |
 | `PHAJAY_MODE` | **`test`** (default) ຫຼື **`production`** — ເລືອກຊຸດ key; ບໍ່ເດົາເອງຈາກຮູບແບບ key |
 | `PHAJAY_SECRET_KEY_TEST` | Test / Sandbox API key (generate-bcel-qr, payment-link) |
 | `PHAJAY_SECRET_KEY_PRODUCTION` | Production API key (ຫຼັງ KYC) |
@@ -262,10 +260,10 @@ pah-khaang-baan/
 
 ## Features
 
-### 🤖 AI Bot (Telegram)
-- Send text or voice messages in Lao/Thai/English
-- AI automatically categorizes income/expense
-- Replies in friendly "ป้า" (Auntie) style Lao
+### 📱 Mini App only
+- Add income/expense manually in Mini App
+- Edit/Delete transactions from recent list
+- No AI parser and no Telegram bot transaction flow
 
 ### 📊 Mini App Dashboard  
 - Balance overview with animated cards
@@ -278,7 +276,6 @@ pah-khaang-baan/
 - User management and subscription overview
 - All transactions log
 - Category CRUD
-- AI prompt editor with live testing
 
 ---
 

@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
+import { isAdminRequest } from "@/lib/admin-auth";
 import type { CategoryFormData } from "@/types";
 
 export const runtime = "edge";
-
-function isAdmin(request: NextRequest): boolean {
-  const session = request.cookies.get("admin_session")?.value;
-  const adminId = process.env.ADMIN_TELEGRAM_ID;
-  return !!session && session === adminId;
-}
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdmin(request)) {
+  if (!(await isAdminRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,7 +42,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdmin(request)) {
+  if (!(await isAdminRequest(request))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
